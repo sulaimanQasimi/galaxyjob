@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\ContactMessage;
 use App\Models\EmployerPackage;
 use App\Models\Job;
 use App\Models\Location;
@@ -22,6 +23,8 @@ class AdminController extends Controller
     public function applications() { return Inertia::render('admin/applications/index', ['applications' => Application::with(['user', 'job.company'])->latest()->paginate(15)]); }
     public function packages() { return Inertia::render('admin/packages/index', ['packages' => EmployerPackage::latest()->paginate(15)]); }
     public function payments() { return Inertia::render('admin/payments/index', ['payments' => Payment::with(['user', 'package'])->latest()->paginate(15)]); }
+
+    public function contactMessages() { return Inertia::render('admin/contact-messages/index', ['messages' => ContactMessage::latest()->paginate(15)]); }
 
     public function categories()
     {
@@ -95,5 +98,19 @@ class AdminController extends Controller
     {
         $payment->update($request->validate(['status' => ['required', 'in:pending,approved,rejected'], 'reference' => ['nullable', 'string', 'max:255'], 'notes' => ['nullable', 'string']]));
         return back()->with('success', 'Payment updated.');
+    }
+
+    public function markContactMessageRead(ContactMessage $contactMessage)
+    {
+        $contactMessage->update(['is_read' => true]);
+
+        return back()->with('success', 'Contact message marked as read.');
+    }
+
+    public function deleteContactMessage(ContactMessage $contactMessage)
+    {
+        $contactMessage->delete();
+
+        return back()->with('success', 'Contact message deleted.');
     }
 }

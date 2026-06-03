@@ -14,6 +14,7 @@ export function StatGrid({ stats }: { stats: Record<string, number> }) {
 
 export function TableShell<T>({ page, columns, render }: { page?: Paginated<T> | null; columns: string[]; render: (row: T) => React.ReactNode }) {
     const rows = page?.data ?? [];
+
     return (
         <div className="grid gap-4">
             <div className="overflow-hidden rounded-lg border bg-card">

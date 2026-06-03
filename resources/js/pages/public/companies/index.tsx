@@ -11,6 +11,7 @@ export default function CompaniesIndex({ companies, filters }: { companies: Pagi
         event.preventDefault();
         router.get('/companies', Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveState: true });
     }
+
     return (
         <PublicLayout>
             <Head title="Companies" />

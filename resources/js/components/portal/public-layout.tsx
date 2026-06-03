@@ -23,11 +23,14 @@ export default function PublicLayout({
                         <span className="flex size-9 items-center justify-center rounded-md bg-emerald-600 text-white">
                             <Briefcase className="size-5" />
                         </span>
-                        GalaxyJob
+                        Galaxy Jobs
                     </Link>
                     <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
+                        <Link href={home.url()}>Home</Link>
                         <Link href={jobs.index.url()}>Jobs</Link>
                         <Link href={companies.index.url()}>Companies</Link>
+                        <Link href="/about">About</Link>
+                        <Link href="/contact">Contact</Link>
                     </nav>
                     <div className="flex items-center gap-2">
                         {auth?.user ? (
@@ -54,52 +57,96 @@ export default function PublicLayout({
                 </div>
             </header>
             <main>{children}</main>
-            <footer className="border-t bg-slate-950 text-slate-300">
+            <footer className="border-t bg-white text-slate-600">
                 <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-[1.3fr_1fr_1fr]">
                     <div>
-                        <div className="flex items-center gap-2 font-semibold text-white">
+                        <div className="flex items-center gap-2 font-semibold text-slate-950">
                             <span className="flex size-9 items-center justify-center rounded-md bg-emerald-600">
-                                <Briefcase className="size-5" />
+                                <Briefcase className="size-5 text-white" />
                             </span>
-                            GalaxyJob
+                            Galaxy Jobs
                         </div>
-                        <p className="mt-4 max-w-md text-sm leading-6 text-slate-400">
-                            A modern job marketplace for verified employers and
-                            ambitious candidates.
+                        <h2 className="mt-5 font-semibold text-slate-950">
+                            About Galaxy Technology
+                        </h2>
+                        <p className="mt-3 max-w-md text-sm leading-6 text-slate-600">
+                            Galaxy Jobs is a recruitment and career platform
+                            operated by Galaxy Technology, the software and IT
+                            company behind the platform.
+                        </p>
+                        <p className="mt-4 text-sm text-slate-500">
+                            © {new Date().getFullYear()} Galaxy Jobs. Powered
+                            by Galaxy Technology.
                         </p>
                     </div>
                     <div>
-                        <h2 className="font-semibold text-white">Explore</h2>
+                        <h2 className="font-semibold text-slate-950">
+                            Quick Links
+                        </h2>
                         <div className="mt-3 grid gap-2 text-sm">
                             <Link
+                                href={home.url()}
+                                className="hover:text-emerald-700"
+                            >
+                                Home
+                            </Link>
+                            <Link
                                 href={jobs.index.url()}
-                                className="hover:text-white"
+                                className="hover:text-emerald-700"
                             >
                                 Jobs
                             </Link>
                             <Link
                                 href={companies.index.url()}
-                                className="hover:text-white"
+                                className="hover:text-emerald-700"
                             >
                                 Companies
+                            </Link>
+                            <Link
+                                href="/about"
+                                className="hover:text-emerald-700"
+                            >
+                                About
+                            </Link>
+                            <Link
+                                href="/contact"
+                                className="hover:text-emerald-700"
+                            >
+                                Contact
                             </Link>
                         </div>
                     </div>
                     <div>
-                        <h2 className="font-semibold text-white">Account</h2>
+                        <h2 className="font-semibold text-slate-950">
+                            Contact Information
+                        </h2>
                         <div className="mt-3 grid gap-2 text-sm">
-                            <Link
-                                href={login.url()}
-                                className="hover:text-white"
+                            <a
+                                href="mailto:info@galaxytechology.com"
+                                className="hover:text-emerald-700"
                             >
-                                Login
-                            </Link>
-                            <Link
-                                href={register.url()}
-                                className="hover:text-white"
+                                info@galaxytechology.com
+                            </a>
+                            <a
+                                href="tel:+93797548234"
+                                className="hover:text-emerald-700"
                             >
-                                Register
-                            </Link>
+                                +93 797 548 234
+                            </a>
+                            <span>Mazar Sharif, Muzafar Market, Afghanistan</span>
+                        </div>
+                        <h2 className="mt-6 font-semibold text-slate-950">
+                            Social Links
+                        </h2>
+                        <div className="mt-3 flex gap-3 text-sm">
+                            {['Facebook', 'LinkedIn', 'X'].map((item) => (
+                                <span
+                                    key={item}
+                                    className="rounded-full border px-3 py-1 text-slate-500"
+                                >
+                                    {item}
+                                </span>
+                            ))}
                         </div>
                     </div>
                 </div>

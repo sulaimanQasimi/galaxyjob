@@ -3,7 +3,10 @@ import { Button } from '@/components/ui/button';
 import type { Paginated } from '@/types/portal';
 
 export default function Pagination({ page }: { page?: Paginated<unknown> | null }) {
-    if (!page?.links || page.links.length <= 3) return null;
+    if (!page?.links || page.links.length <= 3) {
+return null;
+}
+
     return (
         <div className="flex flex-wrap gap-2">
             {page.links.map((link, index) => (

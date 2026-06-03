@@ -1,6 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
-import { Field, TextArea } from '@/components/portal/form-fields';
 import { PageHeader, StatusBadge } from '@/components/portal/admin-table';
+import { Field, TextArea } from '@/components/portal/form-fields';
 import { Button } from '@/components/ui/button';
 import type { Company } from '@/types/portal';
 

@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
-import JobCard from '@/components/portal/job-card';
 import { PageHeader, StatGrid, StatusBadge } from '@/components/portal/admin-table';
+import JobCard from '@/components/portal/job-card';
 import { Button } from '@/components/ui/button';
 import type { Application, Job } from '@/types/portal';
 

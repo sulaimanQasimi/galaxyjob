@@ -10,6 +10,7 @@ import {
     Heart,
     LayoutGrid,
     ListChecks,
+    Mail,
     MapPin,
     Package,
     Tags,
@@ -45,6 +46,7 @@ export function AppSidebar() {
                   { title: 'Categories', href: '/admin/categories', icon: Tags },
                   { title: 'Locations', href: '/admin/locations', icon: MapPin },
                   { title: 'Applications', href: '/admin/applications', icon: FileText },
+                  { title: 'Contact Messages', href: '/admin/contact-messages', icon: Mail },
                   { title: 'Packages', href: '/admin/packages', icon: Package },
                   { title: 'Payments', href: '/admin/payments', icon: CreditCard },
               ]

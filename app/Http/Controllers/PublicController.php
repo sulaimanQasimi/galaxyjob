@@ -3,15 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\ApplicationRequest;
+use App\Http\Requests\ContactMessageRequest;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\ContactMessage;
 use App\Models\Job;
 use App\Models\Location;
 use App\Models\SavedJob;
 use App\Models\User;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -21,8 +24,8 @@ class PublicController extends Controller
     public function home()
     {
         $liveData = $this->homepageLiveData();
-        $canonicalUrl = url()->route('home');
-        $description = 'Find verified jobs, trusted companies, and career opportunities in Afghanistan with GalaxyJob.';
+        $canonicalUrl = $this->absoluteUrl(route('home', [], false));
+        $description = 'Find verified jobs, trusted companies, and career opportunities in Afghanistan with Galaxy Jobs.';
 
         return Inertia::render('public/home', [
             ...$liveData,
@@ -31,15 +34,16 @@ class PublicController extends Controller
             'latestJobs' => $liveData['featured_jobs'],
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
             'seo' => [
-                'title' => 'GalaxyJob - Find verified jobs in Afghanistan',
+                'title' => 'Galaxy Jobs - Find verified jobs in Afghanistan',
                 'description' => $description,
                 'keywords' => 'jobs in Afghanistan, Kabul jobs, remote jobs, hiring, careers, employers',
                 'canonical' => $canonicalUrl,
-                'image' => url('/apple-touch-icon.png'),
+                'image' => $this->absoluteUrl('/apple-touch-icon.png'),
                 'type' => 'website',
                 'robots' => 'index, follow',
                 'jsonLd' => $this->homepageJsonLd($canonicalUrl, $description, $liveData['featured_jobs']->take(3)),
             ],
+            'liveUrl' => route('homepage.live', [], false),
         ]);
     }
 
@@ -48,17 +52,94 @@ class PublicController extends Controller
         return response()->json($this->homepageLiveData());
     }
 
+    public function about()
+    {
+        $canonicalUrl = $this->absoluteUrl(route('about', [], false));
+        $description = 'Learn about Galaxy Jobs, a recruitment and career platform developed and operated by Galaxy Technology.';
+
+        return Inertia::render('public/about', [
+            'stats' => [
+                'jobs' => Job::public()->count(),
+                'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->count(),
+                'candidates' => User::where('role', 'employee')->where('status', 'active')->count(),
+                'applications' => Application::count(),
+            ],
+            'seo' => $this->pageSeo(
+                'About Galaxy Jobs - Powered by Galaxy Technology',
+                $description,
+                $canonicalUrl,
+                [
+                    [
+                        '@context' => 'https://schema.org',
+                        '@type' => 'AboutPage',
+                        'name' => 'About Galaxy Jobs',
+                        'url' => $canonicalUrl,
+                        'description' => $description,
+                        'publisher' => ['@id' => $this->absoluteUrl('/#organization')],
+                    ],
+                    $this->organizationJsonLd(),
+                ],
+            ),
+        ]);
+    }
+
+    public function contact()
+    {
+        $canonicalUrl = $this->absoluteUrl(route('contact', [], false));
+        $description = 'Contact Galaxy Jobs and Galaxy Technology for recruitment, employer, and platform support.';
+
+        return Inertia::render('public/contact', [
+            'contactInfo' => $this->contactInfo(),
+            'seo' => $this->pageSeo(
+                'Contact Galaxy Jobs - Galaxy Technology',
+                $description,
+                $canonicalUrl,
+                [
+                    [
+                        '@context' => 'https://schema.org',
+                        '@type' => 'ContactPage',
+                        'name' => 'Contact Galaxy Jobs',
+                        'url' => $canonicalUrl,
+                        'description' => $description,
+                        'publisher' => ['@id' => $this->absoluteUrl('/#organization')],
+                    ],
+                    $this->organizationJsonLd(),
+                ],
+            ),
+        ]);
+    }
+
+    public function storeContact(ContactMessageRequest $request)
+    {
+        $message = ContactMessage::create($request->validated());
+
+        try {
+            Mail::raw(
+                "New contact message from {$message->name}\n\nEmail: {$message->email}\nPhone: {$message->phone}\nSubject: {$message->subject}\n\n{$message->message}",
+                fn ($mail) => $mail
+                    ->to($this->contactInfo()['email'])
+                    ->subject('New Galaxy Jobs contact message: '.$message->subject)
+            );
+        } catch (\Throwable) {
+            report('Contact message saved, but email notification could not be sent.');
+        }
+
+        return back()->with('success', 'Thank you. Your message has been received.');
+    }
+
     public function sitemap()
     {
         $urls = collect([
-            ['loc' => route('home'), 'priority' => '1.0', 'changefreq' => 'daily'],
-            ['loc' => route('jobs.index'), 'priority' => '0.9', 'changefreq' => 'hourly'],
-            ['loc' => route('companies.index'), 'priority' => '0.8', 'changefreq' => 'daily'],
+            ['loc' => $this->absoluteUrl(route('home', [], false)), 'priority' => '1.0', 'changefreq' => 'daily'],
+            ['loc' => $this->absoluteUrl(route('about', [], false)), 'priority' => '0.7', 'changefreq' => 'monthly'],
+            ['loc' => $this->absoluteUrl(route('contact', [], false)), 'priority' => '0.7', 'changefreq' => 'monthly'],
+            ['loc' => $this->absoluteUrl(route('jobs.index', [], false)), 'priority' => '0.9', 'changefreq' => 'hourly'],
+            ['loc' => $this->absoluteUrl(route('companies.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
         ]);
 
         Job::with('company')->public()->latest()->limit(250)->get()->each(function (Job $job) use ($urls) {
             $urls->push([
-                'loc' => route('jobs.show', $job),
+                'loc' => $this->absoluteUrl(route('jobs.show', $job, false)),
                 'lastmod' => $job->updated_at?->toAtomString(),
                 'priority' => '0.7',
                 'changefreq' => 'daily',
@@ -72,7 +153,7 @@ class PublicController extends Controller
             ->get()
             ->each(function (Company $company) use ($urls) {
                 $urls->push([
-                    'loc' => route('companies.show', $company),
+                    'loc' => $this->absoluteUrl(route('companies.show', $company, false)),
                     'lastmod' => $company->updated_at?->toAtomString(),
                     'priority' => '0.6',
                     'changefreq' => 'weekly',
@@ -85,7 +166,7 @@ class PublicController extends Controller
             ->get()
             ->each(function (Category $category) use ($urls) {
                 $urls->push([
-                    'loc' => route('jobs.index', ['category_id' => $category->id]),
+                    'loc' => $this->absoluteUrl(route('jobs.index', ['category_id' => $category->id], false)),
                     'lastmod' => $category->updated_at?->toAtomString(),
                     'priority' => '0.5',
                     'changefreq' => 'weekly',
@@ -105,7 +186,7 @@ class PublicController extends Controller
             'Disallow: /admin',
             'Disallow: /employee',
             'Disallow: /employer',
-            'Sitemap: '.url('/sitemap.xml'),
+            'Sitemap: '.$this->absoluteUrl('/sitemap.xml'),
             '',
         ]), 200, ['Content-Type' => 'text/plain']);
     }
@@ -235,24 +316,24 @@ class PublicController extends Controller
     {
         $organization = [
             '@type' => 'Organization',
-            '@id' => url('/#organization'),
-            'name' => config('app.name', 'GalaxyJob'),
-            'url' => url('/'),
-            'logo' => url('/apple-touch-icon.png'),
+            '@id' => $this->absoluteUrl('/#organization'),
+            'name' => config('app.name', 'Galaxy Jobs'),
+            'url' => $this->absoluteUrl('/'),
+            'logo' => $this->absoluteUrl('/apple-touch-icon.png'),
         ];
 
         return [
             [
                 '@context' => 'https://schema.org',
                 '@type' => 'WebSite',
-                '@id' => url('/#website'),
-                'name' => config('app.name', 'GalaxyJob'),
-                'url' => url('/'),
+                '@id' => $this->absoluteUrl('/#website'),
+                'name' => config('app.name', 'Galaxy Jobs'),
+                'url' => $this->absoluteUrl('/'),
                 'description' => $description,
-                'publisher' => ['@id' => url('/#organization')],
+                'publisher' => ['@id' => $this->absoluteUrl('/#organization')],
                 'potentialAction' => [
                     '@type' => 'SearchAction',
-                    'target' => route('jobs.index', ['keyword' => '{search_term_string}']),
+                    'target' => $this->absoluteUrl(route('jobs.index', ['keyword' => '{search_term_string}'], false)),
                     'query-input' => 'required name=search_term_string',
                 ],
             ],
@@ -280,12 +361,12 @@ class PublicController extends Controller
                 'datePosted' => $job->created_at?->toDateString(),
                 'validThrough' => $job->deadline?->endOfDay()->toAtomString(),
                 'employmentType' => strtoupper($job->job_type),
-                'url' => route('jobs.show', $job),
+                'url' => $this->absoluteUrl(route('jobs.show', $job, false)),
                 'hiringOrganization' => [
                     '@type' => 'Organization',
                     'name' => $job->company?->name,
                     'sameAs' => $job->company?->website,
-                    'logo' => $job->company?->logo ? url('/storage/'.$job->company->logo) : url('/apple-touch-icon.png'),
+                    'logo' => $job->company?->logo ? $this->absoluteUrl('/storage/'.$job->company->logo) : $this->absoluteUrl('/apple-touch-icon.png'),
                 ],
                 'jobLocation' => [
                     '@type' => 'Place',
@@ -296,6 +377,54 @@ class PublicController extends Controller
                     ],
                 ],
             ])->all(),
+        ];
+    }
+
+    private function absoluteUrl(string $path = '/'): string
+    {
+        return rtrim(config('app.url'), '/').'/'.ltrim($path, '/');
+    }
+
+    private function pageSeo(string $title, string $description, string $canonicalUrl, array $jsonLd): array
+    {
+        return [
+            'title' => $title,
+            'description' => $description,
+            'keywords' => 'Galaxy Jobs, Galaxy Technology, jobs Afghanistan, recruitment platform, career platform',
+            'canonical' => $canonicalUrl,
+            'image' => $this->absoluteUrl('/apple-touch-icon.png'),
+            'type' => 'website',
+            'robots' => 'index, follow',
+            'jsonLd' => $jsonLd,
+        ];
+    }
+
+    private function organizationJsonLd(): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'Organization',
+            '@id' => $this->absoluteUrl('/#organization'),
+            'name' => 'Galaxy Technology',
+            'url' => $this->absoluteUrl('/'),
+            'email' => $this->contactInfo()['email'],
+            'telephone' => $this->contactInfo()['phone'],
+            'address' => [
+                '@type' => 'PostalAddress',
+                'streetAddress' => 'Muzafar Market',
+                'addressLocality' => 'Mazar Sharif',
+                'addressCountry' => 'AF',
+            ],
+            'logo' => $this->absoluteUrl('/apple-touch-icon.png'),
+        ];
+    }
+
+    private function contactInfo(): array
+    {
+        return [
+            'email' => 'info@galaxytechology.com',
+            'phone' => '+93 797 548 234',
+            'address' => 'Mazar Sharif, Muzafar Market, Afghanistan',
         ];
     }
 }

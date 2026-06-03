@@ -1,11 +1,11 @@
 import { router } from '@inertiajs/react';
 import { MapPin, Search, Sparkles } from 'lucide-react';
-import jobs from '@/routes/jobs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import jobs from '@/routes/jobs';
 import type { Job, Location } from '@/types/portal';
 
-const popularTags = ['Laravel', 'Remote', 'Finance', 'Design', 'Marketing'];
+const popularTags = ['Remote', 'Finance', 'Design', 'Marketing', 'Engineering'];
 
 export default function SearchHero({
     locations,
@@ -28,19 +28,19 @@ export default function SearchHero({
     }
 
     return (
-        <section className="relative overflow-hidden bg-slate-950 text-white">
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.28),transparent_34%),radial-gradient(circle_at_85%_25%,rgba(14,165,233,0.24),transparent_30%)]" />
+        <section className="relative overflow-hidden bg-white text-slate-950">
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_15%,rgba(16,185,129,0.16),transparent_34%),radial-gradient(circle_at_85%_25%,rgba(14,165,233,0.14),transparent_30%)]" />
             <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 md:py-20 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
                 <div className="grid gap-7">
                     <div>
-                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm text-emerald-100">
+                        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1 text-sm text-emerald-700">
                             <Sparkles className="size-4" />
                             Premium hiring marketplace
                         </div>
                         <h1 className="max-w-4xl text-4xl leading-tight font-bold md:text-6xl">
                             Find work that fits your ambition.
                         </h1>
-                        <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+                        <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600">
                             Discover verified jobs, trusted employers, and a
                             clearer path from application to offer.
                         </p>
@@ -48,7 +48,7 @@ export default function SearchHero({
 
                     <form
                         onSubmit={submit}
-                        className="grid gap-3 rounded-2xl border border-white/10 bg-white p-3 shadow-2xl md:grid-cols-[1fr_240px_auto]"
+                        className="grid gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-xl md:grid-cols-[1fr_240px_auto]"
                     >
                         <label className="relative block">
                             <span className="sr-only">Job keyword</span>
@@ -88,7 +88,7 @@ export default function SearchHero({
                         </Button>
                     </form>
 
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
                         <span>Popular:</span>
                         {popularTags.map((tag) => (
                             <button
@@ -99,7 +99,7 @@ export default function SearchHero({
                                         keyword: tag,
                                     })
                                 }
-                                className="rounded-full border border-white/15 bg-white/10 px-3 py-1 transition hover:border-emerald-300 hover:bg-emerald-400/15 focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:outline-none"
+                                className="rounded-full border border-slate-200 bg-white px-3 py-1 transition hover:border-emerald-300 hover:bg-emerald-50 focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:outline-none"
                             >
                                 {tag}
                             </button>
@@ -108,7 +108,7 @@ export default function SearchHero({
                 </div>
 
                 <div className="relative">
-                    <div className="rounded-3xl border border-white/10 bg-white/10 p-4 shadow-2xl backdrop-blur">
+                    <div className="rounded-3xl border border-slate-200 bg-slate-50 p-4 shadow-xl">
                         <div className="rounded-2xl bg-white p-5 text-slate-950 shadow-xl">
                             <div className="flex items-center justify-between">
                                 <div>

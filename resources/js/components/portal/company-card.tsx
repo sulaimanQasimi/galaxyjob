@@ -9,36 +9,37 @@ export default function CompanyCard({ company }: { company: Company }) {
         <article>
             <Card className="rounded-xl border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg">
                 <CardContent className="grid gap-4 p-5">
-                <div className="flex items-center gap-3">
-                    <CompanyLogo name={company.name} logo={company.logo} />
-                    <div className="min-w-0">
+                    <div className="flex items-center gap-3">
+                        <CompanyLogo name={company.name} logo={company.logo} />
+                        <div className="min-w-0">
+                            <Link
+                                href={companies.show.url(company)}
+                                className="truncate font-semibold text-slate-950 transition hover:text-emerald-700"
+                            >
+                                {company.name}
+                            </Link>
+                            <p className="text-sm text-slate-500">
+                                {company.industry || 'Employer'}
+                            </p>
+                        </div>
+                    </div>
+                    <p className="line-clamp-2 text-sm leading-6 text-slate-500">
+                        {company.description ||
+                            'Verified hiring team on Galaxy Jobs.'}
+                    </p>
+                    <div className="flex items-center justify-between border-t pt-4 text-sm">
+                        <span className="font-semibold text-slate-950">
+                            {(company.jobs_count ?? 0).toLocaleString()} open
+                            jobs
+                        </span>
                         <Link
                             href={companies.show.url(company)}
-                            className="truncate font-semibold text-slate-950 transition hover:text-emerald-700"
+                            className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800"
                         >
-                            {company.name}
+                            View
+                            <ArrowRight className="size-4" />
                         </Link>
-                        <p className="text-sm text-slate-500">
-                            {company.industry || 'Employer'}
-                        </p>
                     </div>
-                </div>
-                <p className="line-clamp-2 text-sm leading-6 text-slate-500">
-                    {company.description ||
-                        'Verified hiring team on GalaxyJob.'}
-                </p>
-                <div className="flex items-center justify-between border-t pt-4 text-sm">
-                    <span className="font-semibold text-slate-950">
-                        {(company.jobs_count ?? 0).toLocaleString()} open jobs
-                    </span>
-                    <Link
-                        href={companies.show.url(company)}
-                        className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800"
-                    >
-                        View
-                        <ArrowRight className="size-4" />
-                    </Link>
-                </div>
                 </CardContent>
             </Card>
         </article>

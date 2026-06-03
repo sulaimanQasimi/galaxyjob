@@ -1,6 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
-import { Field } from '@/components/portal/form-fields';
 import { PageHeader, TableShell } from '@/components/portal/admin-table';
+import { Field } from '@/components/portal/form-fields';
 import { Button } from '@/components/ui/button';
 
 export default function LocationsIndex({ locations }: { locations: any }) {

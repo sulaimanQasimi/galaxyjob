@@ -1,6 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
-import { Field, TextArea } from '@/components/portal/form-fields';
 import { PageHeader, TableShell } from '@/components/portal/admin-table';
+import { Field, TextArea } from '@/components/portal/form-fields';
 import { Button } from '@/components/ui/button';
 
 export default function CategoriesIndex({ categories }: { categories: any }) {

@@ -14,7 +14,8 @@ import CompanyCard from '@/components/portal/company-card';
 import JobCard from '@/components/portal/job-card';
 import PublicLayout from '@/components/portal/public-layout';
 import SearchHero from '@/components/portal/search-hero';
-import SeoHead, { type SeoData } from '@/components/portal/seo-head';
+import SeoHead from '@/components/portal/seo-head';
+import type { SeoData } from '@/components/portal/seo-head';
 import StatCard from '@/components/portal/stat-card';
 import { Button } from '@/components/ui/button';
 import { register } from '@/routes';
@@ -43,6 +44,7 @@ export default function Home({
     locations,
     topCompanies = [],
     seo,
+    liveUrl,
 }: {
     stats: HomeStats;
     featuredJobs: Job[];
@@ -51,6 +53,7 @@ export default function Home({
     locations: Location[];
     topCompanies?: Company[];
     seo: SeoData;
+    liveUrl: string;
 }) {
     const [liveData, setLiveData] = useState<LiveHomeData>({
         stats,
@@ -61,32 +64,35 @@ export default function Home({
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [refreshError, setRefreshError] = useState<string | null>(null);
 
-    const refreshHomepage = useCallback(async (showLoading = true) => {
-        if (showLoading) {
-            setIsRefreshing(true);
-        }
-
-        try {
-            const response = await fetch('/api/homepage/live', {
-                headers: { Accept: 'application/json' },
-            });
-
-            if (!response.ok) {
-                throw new Error('Unable to refresh homepage data.');
+    const refreshHomepage = useCallback(
+        async (showLoading = true) => {
+            if (showLoading) {
+                setIsRefreshing(true);
             }
 
-            setLiveData(await response.json());
-            setRefreshError(null);
-        } catch (error) {
-            setRefreshError(
-                error instanceof Error
-                    ? error.message
-                    : 'Unable to refresh homepage data.',
-            );
-        } finally {
-            setIsRefreshing(false);
-        }
-    }, []);
+            try {
+                const response = await fetch(liveUrl, {
+                    headers: { Accept: 'application/json' },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Unable to refresh homepage data.');
+                }
+
+                setLiveData(await response.json());
+                setRefreshError(null);
+            } catch (error) {
+                setRefreshError(
+                    error instanceof Error
+                        ? error.message
+                        : 'Unable to refresh homepage data.',
+                );
+            } finally {
+                setIsRefreshing(false);
+            }
+        },
+        [liveUrl],
+    );
 
     useEffect(() => {
         const interval = window.setInterval(() => {
@@ -231,13 +237,12 @@ export default function Home({
                 </div>
             </section>
 
-            <section className="bg-slate-950 py-14 text-white">
+            <section className="bg-emerald-50 py-14 text-slate-950">
                 <div className="mx-auto max-w-7xl px-4">
                     <SectionHeader
                         eyebrow="Simple workflow"
-                        title="How GalaxyJob works"
+                        title="How Galaxy Jobs works"
                         description="A clear path for jobseekers and employers from first step to final decision."
-                        dark
                     />
                     <div className="grid gap-5 md:grid-cols-3">
                         <StepCard
@@ -289,36 +294,22 @@ function SectionHeader({
     title,
     description,
     action,
-    dark = false,
 }: {
     eyebrow: string;
     title: string;
     description: string;
     action?: React.ReactNode;
-    dark?: boolean;
 }) {
     return (
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
             <div>
-                <p
-                    className={`text-sm font-semibold tracking-wide uppercase ${
-                        dark ? 'text-emerald-300' : 'text-emerald-700'
-                    }`}
-                >
+                <p className="text-sm font-semibold tracking-wide text-emerald-700 uppercase">
                     {eyebrow}
                 </p>
-                <h2
-                    className={`mt-2 text-3xl font-bold tracking-tight ${
-                        dark ? 'text-white' : 'text-slate-950'
-                    }`}
-                >
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-950">
                     {title}
                 </h2>
-                <p
-                    className={`mt-3 max-w-2xl text-base leading-7 ${
-                        dark ? 'text-slate-300' : 'text-slate-600'
-                    }`}
-                >
+                <p className="mt-3 max-w-2xl text-base leading-7 text-slate-600">
                     {description}
                 </p>
             </div>
@@ -339,17 +330,17 @@ function StepCard({
     text: string;
 }) {
     return (
-        <div className="rounded-2xl border border-white/10 bg-white/10 p-6 transition duration-200 hover:-translate-y-1 hover:bg-white/15">
+        <div className="rounded-2xl border border-emerald-100 bg-white p-6 shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-lg">
             <div className="flex items-center justify-between">
                 <span className="flex size-12 items-center justify-center rounded-xl bg-emerald-400 text-slate-950">
                     <Icon className="size-5" aria-hidden="true" />
                 </span>
-                <span className="text-sm font-semibold text-slate-400">
+                <span className="text-sm font-semibold text-emerald-700">
                     {step}
                 </span>
             </div>
             <h3 className="mt-6 text-xl font-semibold">{title}</h3>
-            <p className="mt-3 leading-7 text-slate-300">{text}</p>
+            <p className="mt-3 leading-7 text-slate-600">{text}</p>
         </div>
     );
 }

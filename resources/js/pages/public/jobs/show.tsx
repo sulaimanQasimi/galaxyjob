@@ -59,6 +59,9 @@ export default function JobShow({ job, hasApplied, isSaved, relatedJobs }: { job
 }
 
 function Block({ title, body }: { title: string; body?: string }) {
-    if (!body) return null;
+    if (!body) {
+return null;
+}
+
     return <section><h2 className="mb-2 text-xl font-semibold">{title}</h2><p className="whitespace-pre-line text-slate-700">{body}</p></section>;
 }

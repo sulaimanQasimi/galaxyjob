@@ -11,6 +11,9 @@ Route::get('/', [PublicController::class, 'home'])->name('home');
 Route::get('/api/homepage/live', [PublicController::class, 'live'])->name('homepage.live');
 Route::get('/sitemap.xml', [PublicController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [PublicController::class, 'robots'])->name('robots');
+Route::get('/about', [PublicController::class, 'about'])->name('about');
+Route::get('/contact', [PublicController::class, 'contact'])->name('contact');
+Route::post('/contact', [PublicController::class, 'storeContact'])->name('contact.store');
 Route::get('/jobs', [PublicController::class, 'jobs'])->name('jobs.index');
 Route::get('/jobs/{job:slug}', [PublicController::class, 'showJob'])->name('jobs.show');
 Route::get('/companies', [PublicController::class, 'companies'])->name('companies.index');
@@ -41,6 +44,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('packages', [AdminController::class, 'storePackage'])->name('packages.store');
         Route::get('payments', [AdminController::class, 'payments'])->name('payments.index');
         Route::patch('payments/{payment}', [AdminController::class, 'updatePayment'])->name('payments.update');
+        Route::get('contact-messages', [AdminController::class, 'contactMessages'])->name('contact-messages.index');
+        Route::patch('contact-messages/{contactMessage}/read', [AdminController::class, 'markContactMessageRead'])->name('contact-messages.read');
+        Route::delete('contact-messages/{contactMessage}', [AdminController::class, 'deleteContactMessage'])->name('contact-messages.destroy');
     });
 
     Route::prefix('employer')->name('employer.')->middleware('role:employer')->group(function () {
