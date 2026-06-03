@@ -4,13 +4,29 @@ export type Paginated<T> = {
     meta?: unknown;
 };
 
-export type Category = { id: number; name: string; slug: string; description?: string; is_active?: boolean; jobs_count?: number };
-export type Location = { id: number; name: string; slug: string; country?: string; is_active?: boolean; jobs_count?: number };
+export type Category = {
+    id: number;
+    name: string;
+    slug: string;
+    description?: string;
+    is_active?: boolean;
+    jobs_count?: number;
+};
+export type Location = {
+    id: number;
+    name: string;
+    slug: string;
+    country?: string;
+    is_active?: boolean;
+    jobs_count?: number;
+};
 export type Skill = { id: number; name: string; slug: string };
 export type Company = {
     id: number;
     name: string;
     slug: string;
+    logo?: string | null;
+    cover_image?: string | null;
     industry?: string;
     website?: string;
     phone?: string;

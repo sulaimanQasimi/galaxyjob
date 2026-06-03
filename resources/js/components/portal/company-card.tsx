@@ -1,25 +1,65 @@
 import { Link } from '@inertiajs/react';
-import { Building2, MapPin } from 'lucide-react';
+import { ArrowRight, Building2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import companies from '@/routes/companies';
 import type { Company } from '@/types/portal';
 
 export default function CompanyCard({ company }: { company: Company }) {
     return (
-        <Card className="rounded-lg">
-            <CardContent className="grid gap-3 p-5">
+        <article>
+            <Card className="rounded-xl border-slate-200 bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg">
+                <CardContent className="grid gap-4 p-5">
                 <div className="flex items-center gap-3">
-                    <span className="flex size-11 items-center justify-center rounded-md bg-emerald-100 text-emerald-700"><Building2 /></span>
-                    <div>
-                        <Link href={`/companies/${company.slug}`} className="font-semibold hover:text-emerald-700">{company.name}</Link>
-                        <p className="text-sm text-muted-foreground">{company.industry || 'Employer'}</p>
+                    <CompanyLogo name={company.name} logo={company.logo} />
+                    <div className="min-w-0">
+                        <Link
+                            href={companies.show.url(company)}
+                            className="truncate font-semibold text-slate-950 transition hover:text-emerald-700"
+                        >
+                            {company.name}
+                        </Link>
+                        <p className="text-sm text-slate-500">
+                            {company.industry || 'Employer'}
+                        </p>
                     </div>
                 </div>
-                <p className="line-clamp-2 text-sm text-muted-foreground">{company.description || 'Hiring team on GalaxyJob.'}</p>
-                <div className="flex items-center justify-between text-sm">
-                    <span className="flex items-center gap-1 text-muted-foreground"><MapPin className="size-4" /> {company.address || 'Afghanistan'}</span>
-                    <span>{company.jobs_count ?? 0} jobs</span>
+                <p className="line-clamp-2 text-sm leading-6 text-slate-500">
+                    {company.description ||
+                        'Verified hiring team on GalaxyJob.'}
+                </p>
+                <div className="flex items-center justify-between border-t pt-4 text-sm">
+                    <span className="font-semibold text-slate-950">
+                        {(company.jobs_count ?? 0).toLocaleString()} open jobs
+                    </span>
+                    <Link
+                        href={companies.show.url(company)}
+                        className="inline-flex items-center gap-1 font-medium text-emerald-700 hover:text-emerald-800"
+                    >
+                        View
+                        <ArrowRight className="size-4" />
+                    </Link>
                 </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </article>
+    );
+}
+
+function CompanyLogo({ name, logo }: { name: string; logo?: string | null }) {
+    if (logo) {
+        return (
+            <img
+                src={`/storage/${logo}`}
+                alt={`${name} logo`}
+                loading="lazy"
+                className="size-12 rounded-lg object-cover ring-1 ring-slate-200"
+            />
+        );
+    }
+
+    return (
+        <span className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-700 ring-1 ring-slate-200">
+            <Building2 className="size-5" aria-hidden="true" />
+        </span>
     );
 }

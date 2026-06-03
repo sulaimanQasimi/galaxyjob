@@ -1,78 +1,440 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Search } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import {
+    BriefcaseBusiness,
+    Building2,
+    CheckCircle2,
+    FileText,
+    Send,
+    UserPlus,
+    Users,
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import CategoryCard from '@/components/portal/category-card';
+import CompanyCard from '@/components/portal/company-card';
 import JobCard from '@/components/portal/job-card';
 import PublicLayout from '@/components/portal/public-layout';
+import SearchHero from '@/components/portal/search-hero';
+import SeoHead, { type SeoData } from '@/components/portal/seo-head';
+import StatCard from '@/components/portal/stat-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import type { Category, Job, Location } from '@/types/portal';
+import { register } from '@/routes';
+import jobs from '@/routes/jobs';
+import type { Category, Company, Job, Location } from '@/types/portal';
 
-export default function Home({ stats, featuredJobs, latestJobs, categories, locations }: { stats: any; featuredJobs: Job[]; latestJobs: Job[]; categories: Category[]; locations: Location[] }) {
-    function search(event: React.FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        const data = new FormData(event.currentTarget);
-        router.get('/jobs', Object.fromEntries(data.entries()));
-    }
+type HomeStats = {
+    jobs?: number;
+    companies?: number;
+    candidates?: number;
+    applications?: number;
+};
+
+type LiveHomeData = {
+    stats: HomeStats;
+    featured_jobs: Job[];
+    featured_companies: Company[];
+    categories: Category[];
+};
+
+export default function Home({
+    stats,
+    featuredJobs,
+    latestJobs,
+    categories,
+    locations,
+    topCompanies = [],
+    seo,
+}: {
+    stats: HomeStats;
+    featuredJobs: Job[];
+    latestJobs: Job[];
+    categories: Category[];
+    locations: Location[];
+    topCompanies?: Company[];
+    seo: SeoData;
+}) {
+    const [liveData, setLiveData] = useState<LiveHomeData>({
+        stats,
+        featured_jobs: featuredJobs.length ? featuredJobs : latestJobs,
+        featured_companies: topCompanies,
+        categories,
+    });
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [refreshError, setRefreshError] = useState<string | null>(null);
+
+    const refreshHomepage = useCallback(async (showLoading = true) => {
+        if (showLoading) {
+            setIsRefreshing(true);
+        }
+
+        try {
+            const response = await fetch('/api/homepage/live', {
+                headers: { Accept: 'application/json' },
+            });
+
+            if (!response.ok) {
+                throw new Error('Unable to refresh homepage data.');
+            }
+
+            setLiveData(await response.json());
+            setRefreshError(null);
+        } catch (error) {
+            setRefreshError(
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to refresh homepage data.',
+            );
+        } finally {
+            setIsRefreshing(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            void refreshHomepage(false);
+        }, 45_000);
+
+        return () => window.clearInterval(interval);
+    }, [refreshHomepage]);
+
+    const visibleFeaturedJobs = useMemo(
+        () => liveData.featured_jobs,
+        [liveData.featured_jobs],
+    );
+    const visibleCompanies = liveData.featured_companies;
+    const visibleCategories = liveData.categories;
 
     return (
         <PublicLayout>
-            <Head title="Find jobs in Afghanistan" />
-            <section className="bg-white">
-                <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 lg:grid-cols-[1.1fr_0.9fr] lg:py-16">
-                    <div className="grid content-center gap-6">
-                        <div>
-                            <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-emerald-700">Afghanistan job portal</p>
-                            <h1 className="text-4xl font-bold tracking-tight md:text-5xl">Find the right job, team, and next step.</h1>
-                            <p className="mt-4 max-w-2xl text-lg text-slate-600">Browse verified companies, active vacancies, and practical hiring workflows for jobseekers and employers.</p>
+            <SeoHead seo={seo} />
+
+            <SearchHero
+                locations={locations}
+                highlightedJobs={visibleFeaturedJobs}
+            />
+
+            <section className="bg-slate-50 py-10" aria-live="polite">
+                <div className="mx-auto grid max-w-7xl gap-4 px-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <StatCard
+                        label="Open jobs"
+                        value={
+                            liveData.stats.jobs ?? visibleFeaturedJobs.length
+                        }
+                        icon={BriefcaseBusiness}
+                        tone="emerald"
+                    />
+                    <StatCard
+                        label="Companies"
+                        value={
+                            liveData.stats.companies ?? visibleCompanies.length
+                        }
+                        icon={Building2}
+                        tone="sky"
+                    />
+                    <StatCard
+                        label="Candidates"
+                        value={liveData.stats.candidates ?? 0}
+                        icon={Users}
+                        tone="amber"
+                    />
+                    <StatCard
+                        label="Applications"
+                        value={liveData.stats.applications ?? 0}
+                        icon={FileText}
+                        tone="rose"
+                    />
+                </div>
+                <LiveStatus
+                    isRefreshing={isRefreshing}
+                    error={refreshError}
+                    onRetry={() => void refreshHomepage()}
+                />
+            </section>
+
+            <section className="bg-white py-14">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader
+                        eyebrow="Explore by field"
+                        title="Featured categories"
+                        description="Browse hiring areas with active opportunities and verified employers."
+                        action={
+                            <Button asChild variant="outline">
+                                <Link href={jobs.index.url()}>
+                                    Browse all jobs
+                                </Link>
+                            </Button>
+                        }
+                    />
+                    {isRefreshing && <SectionSkeleton />}
+                    {visibleCategories.length ? (
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                            {visibleCategories.map((category, index) => (
+                                <CategoryCard
+                                    key={category.id}
+                                    category={category}
+                                    index={index}
+                                />
+                            ))}
                         </div>
-                        <form onSubmit={search} className="grid gap-3 rounded-lg border bg-slate-50 p-3 md:grid-cols-[1fr_220px_auto]">
-                            <Input name="search" placeholder="Keyword, title, skill" />
-                            <select name="location_id" className="rounded-md border bg-white px-3 py-2 text-sm">
-                                <option value="">All locations</option>
-                                {locations.map((location) => <option key={location.id} value={location.id}>{location.name}</option>)}
-                            </select>
-                            <Button type="submit"><Search className="size-4" /> Search</Button>
-                        </form>
-                        <div className="grid grid-cols-3 gap-3">
-                            <Stat label="Active jobs" value={stats.jobs} />
-                            <Stat label="Companies" value={stats.companies} />
-                            <Stat label="Categories" value={stats.categories} />
+                    ) : (
+                        <EmptyState text="Categories will appear once the admin publishes them." />
+                    )}
+                </div>
+            </section>
+
+            <section className="bg-slate-50 py-14">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader
+                        eyebrow="Curated roles"
+                        title="Featured jobs"
+                        description="Premium listings from employers currently hiring."
+                        action={
+                            <Button asChild>
+                                <Link href={jobs.index.url()}>
+                                    View all jobs
+                                </Link>
+                            </Button>
+                        }
+                    />
+                    {isRefreshing && <SectionSkeleton />}
+                    {visibleFeaturedJobs.length ? (
+                        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                            {visibleFeaturedJobs.slice(0, 6).map((job) => (
+                                <JobCard key={job.id} job={job} />
+                            ))}
                         </div>
-                    </div>
-                    <div className="grid gap-3 rounded-lg bg-emerald-950 p-5 text-white">
-                        <h2 className="text-xl font-semibold">Featured opportunities</h2>
-                        {featuredJobs.slice(0, 4).map((job) => (
-                            <Link key={job.id} href={`/jobs/${job.slug}`} className="rounded-md bg-white/10 p-4 hover:bg-white/15">
-                                <div className="font-medium">{job.title}</div>
-                                <div className="text-sm text-emerald-100">{job.company?.name} • {job.location?.name}</div>
-                            </Link>
-                        ))}
+                    ) : (
+                        <EmptyState text="Featured jobs will appear here as employers publish approved listings." />
+                    )}
+                </div>
+            </section>
+
+            <section className="bg-white py-14">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader
+                        eyebrow="Trusted employers"
+                        title="Top companies"
+                        description="Discover companies with active jobs and growing teams."
+                    />
+                    {isRefreshing && <SectionSkeleton />}
+                    {visibleCompanies.length ? (
+                        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                            {visibleCompanies.map((company) => (
+                                <CompanyCard
+                                    key={company.id}
+                                    company={company}
+                                />
+                            ))}
+                        </div>
+                    ) : (
+                        <EmptyState text="Approved companies with open jobs will appear here." />
+                    )}
+                </div>
+            </section>
+
+            <section className="bg-slate-950 py-14 text-white">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader
+                        eyebrow="Simple workflow"
+                        title="How GalaxyJob works"
+                        description="A clear path for jobseekers and employers from first step to final decision."
+                        dark
+                    />
+                    <div className="grid gap-5 md:grid-cols-3">
+                        <StepCard
+                            icon={UserPlus}
+                            step="01"
+                            title="Create account"
+                            text="Register as a jobseeker or employer and access the right dashboard."
+                        />
+                        <StepCard
+                            icon={FileText}
+                            step="02"
+                            title="Build profile or post job"
+                            text="Jobseekers add resume details. Employers submit company profiles and jobs."
+                        />
+                        <StepCard
+                            icon={CheckCircle2}
+                            step="03"
+                            title="Apply or hire"
+                            text="Apply to active jobs, review applicants, and move candidates through statuses."
+                        />
                     </div>
                 </div>
             </section>
-            <section className="mx-auto max-w-7xl px-4 py-10">
-                <div className="mb-5 flex items-center justify-between">
-                    <h2 className="text-2xl font-semibold">Latest jobs</h2>
-                    <Button asChild variant="outline"><Link href="/jobs">View all</Link></Button>
-                </div>
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    {latestJobs.map((job) => <JobCard key={job.id} job={job} />)}
-                </div>
-            </section>
-            <section className="mx-auto max-w-7xl px-4 pb-12">
-                <h2 className="mb-5 text-2xl font-semibold">Popular categories</h2>
-                <div className="grid gap-3 md:grid-cols-5">
-                    {categories.map((category) => (
-                        <Link key={category.id} href={`/jobs?category_id=${category.id}`} className="rounded-lg border bg-white p-4 hover:border-emerald-500">
-                            <div className="font-medium">{category.name}</div>
-                            <div className="text-sm text-muted-foreground">{category.jobs_count ?? 0} jobs</div>
-                        </Link>
-                    ))}
+
+            <section className="bg-white py-14">
+                <div className="mx-auto grid max-w-7xl gap-5 px-4 lg:grid-cols-2">
+                    <CtaCard
+                        title="Ready for your next role?"
+                        text="Search active opportunities and apply with your profile or uploaded CV."
+                        href={jobs.index.url()}
+                        button="Find jobs"
+                        icon={Send}
+                    />
+                    <CtaCard
+                        title="Hiring for your team?"
+                        text="Create an employer account, complete your company profile, and submit jobs for approval."
+                        href={register.url({ query: { role: 'employer' } })}
+                        button="Post a job"
+                        icon={BriefcaseBusiness}
+                    />
                 </div>
             </section>
         </PublicLayout>
     );
 }
 
-function Stat({ label, value }: { label: string; value: number }) {
-    return <div className="rounded-lg border bg-white p-4"><div className="text-2xl font-semibold">{value}</div><div className="text-sm text-muted-foreground">{label}</div></div>;
+function SectionHeader({
+    eyebrow,
+    title,
+    description,
+    action,
+    dark = false,
+}: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    action?: React.ReactNode;
+    dark?: boolean;
+}) {
+    return (
+        <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+                <p
+                    className={`text-sm font-semibold tracking-wide uppercase ${
+                        dark ? 'text-emerald-300' : 'text-emerald-700'
+                    }`}
+                >
+                    {eyebrow}
+                </p>
+                <h2
+                    className={`mt-2 text-3xl font-bold tracking-tight ${
+                        dark ? 'text-white' : 'text-slate-950'
+                    }`}
+                >
+                    {title}
+                </h2>
+                <p
+                    className={`mt-3 max-w-2xl text-base leading-7 ${
+                        dark ? 'text-slate-300' : 'text-slate-600'
+                    }`}
+                >
+                    {description}
+                </p>
+            </div>
+            {action}
+        </div>
+    );
+}
+
+function StepCard({
+    icon: Icon,
+    step,
+    title,
+    text,
+}: {
+    icon: typeof UserPlus;
+    step: string;
+    title: string;
+    text: string;
+}) {
+    return (
+        <div className="rounded-2xl border border-white/10 bg-white/10 p-6 transition duration-200 hover:-translate-y-1 hover:bg-white/15">
+            <div className="flex items-center justify-between">
+                <span className="flex size-12 items-center justify-center rounded-xl bg-emerald-400 text-slate-950">
+                    <Icon className="size-5" aria-hidden="true" />
+                </span>
+                <span className="text-sm font-semibold text-slate-400">
+                    {step}
+                </span>
+            </div>
+            <h3 className="mt-6 text-xl font-semibold">{title}</h3>
+            <p className="mt-3 leading-7 text-slate-300">{text}</p>
+        </div>
+    );
+}
+
+function CtaCard({
+    title,
+    text,
+    href,
+    button,
+    icon: Icon,
+}: {
+    title: string;
+    text: string;
+    href: string;
+    button: string;
+    icon: typeof Send;
+}) {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6 shadow-sm md:p-8">
+            <span className="flex size-12 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                <Icon className="size-5" aria-hidden="true" />
+            </span>
+            <h2 className="mt-6 text-2xl font-bold text-slate-950">{title}</h2>
+            <p className="mt-3 leading-7 text-slate-600">{text}</p>
+            <Button asChild className="mt-6">
+                <Link href={href}>{button}</Link>
+            </Button>
+        </div>
+    );
+}
+
+function EmptyState({ text }: { text: string }) {
+    return (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+            {text}
+        </div>
+    );
+}
+
+function LiveStatus({
+    isRefreshing,
+    error,
+    onRetry,
+}: {
+    isRefreshing: boolean;
+    error: string | null;
+    onRetry: () => void;
+}) {
+    if (!isRefreshing && !error) {
+        return null;
+    }
+
+    return (
+        <div className="mx-auto mt-4 flex max-w-7xl items-center justify-between gap-3 px-4 text-sm">
+            {isRefreshing ? (
+                <span className="rounded-full bg-white px-3 py-1 text-slate-500 shadow-sm">
+                    Refreshing live homepage data...
+                </span>
+            ) : (
+                <span className="rounded-full bg-rose-50 px-3 py-1 text-rose-700 ring-1 ring-rose-100">
+                    {error}
+                </span>
+            )}
+            {error && (
+                <button
+                    type="button"
+                    onClick={onRetry}
+                    className="font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                    Retry
+                </button>
+            )}
+        </div>
+    );
+}
+
+function SectionSkeleton() {
+    return (
+        <div className="mb-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3].map((item) => (
+                <div
+                    key={item}
+                    className="h-28 animate-pulse rounded-xl bg-slate-200/70"
+                />
+            ))}
+        </div>
+    );
 }

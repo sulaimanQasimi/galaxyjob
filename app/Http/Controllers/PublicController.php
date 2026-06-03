@@ -9,35 +9,117 @@ use App\Models\Company;
 use App\Models\Job;
 use App\Models\Location;
 use App\Models\SavedJob;
+use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class PublicController extends Controller
 {
     public function home()
     {
+        $liveData = $this->homepageLiveData();
+        $canonicalUrl = url()->route('home');
+        $description = 'Find verified jobs, trusted companies, and career opportunities in Afghanistan with GalaxyJob.';
+
         return Inertia::render('public/home', [
-            'stats' => [
-                'jobs' => Job::public()->count(),
-                'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->count(),
-                'categories' => Category::where('is_active', true)->count(),
-            ],
-            'featuredJobs' => Job::with(['company', 'category', 'location'])->public()->where('is_featured', true)->latest()->take(6)->get(),
-            'latestJobs' => Job::with(['company', 'category', 'location'])->public()->latest()->take(8)->get(),
-            'categories' => Category::withCount(['jobs' => fn ($query) => $query->public()])->where('is_active', true)->orderBy('name')->take(10)->get(),
+            ...$liveData,
+            'featuredJobs' => $liveData['featured_jobs'],
+            'topCompanies' => $liveData['featured_companies'],
+            'latestJobs' => $liveData['featured_jobs'],
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
+            'seo' => [
+                'title' => 'GalaxyJob - Find verified jobs in Afghanistan',
+                'description' => $description,
+                'keywords' => 'jobs in Afghanistan, Kabul jobs, remote jobs, hiring, careers, employers',
+                'canonical' => $canonicalUrl,
+                'image' => url('/apple-touch-icon.png'),
+                'type' => 'website',
+                'robots' => 'index, follow',
+                'jsonLd' => $this->homepageJsonLd($canonicalUrl, $description, $liveData['featured_jobs']->take(3)),
+            ],
         ]);
+    }
+
+    public function live()
+    {
+        return response()->json($this->homepageLiveData());
+    }
+
+    public function sitemap()
+    {
+        $urls = collect([
+            ['loc' => route('home'), 'priority' => '1.0', 'changefreq' => 'daily'],
+            ['loc' => route('jobs.index'), 'priority' => '0.9', 'changefreq' => 'hourly'],
+            ['loc' => route('companies.index'), 'priority' => '0.8', 'changefreq' => 'daily'],
+        ]);
+
+        Job::with('company')->public()->latest()->limit(250)->get()->each(function (Job $job) use ($urls) {
+            $urls->push([
+                'loc' => route('jobs.show', $job),
+                'lastmod' => $job->updated_at?->toAtomString(),
+                'priority' => '0.7',
+                'changefreq' => 'daily',
+            ]);
+        });
+
+        Company::where('verification_status', 'approved')
+            ->where('is_active', true)
+            ->latest()
+            ->limit(250)
+            ->get()
+            ->each(function (Company $company) use ($urls) {
+                $urls->push([
+                    'loc' => route('companies.show', $company),
+                    'lastmod' => $company->updated_at?->toAtomString(),
+                    'priority' => '0.6',
+                    'changefreq' => 'weekly',
+                ]);
+            });
+
+        Category::withCount(['jobs' => fn ($query) => $query->public()])
+            ->where('is_active', true)
+            ->having('jobs_count', '>', 0)
+            ->get()
+            ->each(function (Category $category) use ($urls) {
+                $urls->push([
+                    'loc' => route('jobs.index', ['category_id' => $category->id]),
+                    'lastmod' => $category->updated_at?->toAtomString(),
+                    'priority' => '0.5',
+                    'changefreq' => 'weekly',
+                ]);
+            });
+
+        $xml = view('sitemap', ['urls' => $urls])->render();
+
+        return Response::make($xml, 200, ['Content-Type' => 'application/xml']);
+    }
+
+    public function robots()
+    {
+        return Response::make(implode("\n", [
+            'User-agent: *',
+            'Allow: /',
+            'Disallow: /admin',
+            'Disallow: /employee',
+            'Disallow: /employer',
+            'Sitemap: '.url('/sitemap.xml'),
+            '',
+        ]), 200, ['Content-Type' => 'text/plain']);
     }
 
     public function jobs(Request $request)
     {
         $jobs = Job::with(['company', 'category', 'location'])
             ->public()
-            ->when($request->search, fn ($query, $search) => $query->where(fn ($q) => $q
+            ->when($request->search ?? $request->keyword, fn ($query, $search) => $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('description', 'like', "%{$search}%")))
             ->when($request->category_id, fn ($query, $id) => $query->where('category_id', $id))
             ->when($request->location_id, fn ($query, $id) => $query->where('location_id', $id))
+            ->when($request->location && ! $request->location_id, fn ($query, $location) => $query->whereHas('location', fn ($q) => $q->where('name', $location)))
             ->when($request->job_type, fn ($query, $type) => $query->where('job_type', $type))
             ->when($request->experience_level, fn ($query, $level) => $query->where('experience_level', $level))
             ->when($request->salary_min, fn ($query, $min) => $query->where('salary_max', '>=', $min))
@@ -47,7 +129,7 @@ class PublicController extends Controller
 
         return Inertia::render('public/jobs/index', [
             'jobs' => $jobs,
-            'filters' => $request->only(['search', 'category_id', 'location_id', 'job_type', 'experience_level', 'salary_min']),
+            'filters' => $request->only(['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'experience_level', 'salary_min']),
             'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
         ]);
@@ -116,5 +198,104 @@ class PublicController extends Controller
         $saved ? $saved->delete() : SavedJob::create(['job_id' => $job->id, 'user_id' => $request->user()->id]);
 
         return back()->with('success', $saved ? 'Job removed from saved jobs.' : 'Job saved.');
+    }
+
+    private function homepageLiveData(): array
+    {
+        return Cache::remember('homepage.live', 60, fn () => [
+            'stats' => [
+                'jobs' => Job::public()->count(),
+                'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->count(),
+                'categories' => Category::where('is_active', true)->count(),
+                'candidates' => User::where('role', 'employee')->where('status', 'active')->count(),
+                'applications' => Application::count(),
+            ],
+            'featured_jobs' => Job::with(['company', 'category', 'location'])
+                ->public()
+                ->latest()
+                ->take(6)
+                ->get(),
+            'featured_companies' => Company::withCount(['jobs' => fn ($query) => $query->public()])
+                ->where('verification_status', 'approved')
+                ->where('is_active', true)
+                ->whereHas('jobs', fn ($query) => $query->public())
+                ->orderByDesc('jobs_count')
+                ->take(6)
+                ->get(),
+            'categories' => Category::withCount(['jobs' => fn ($query) => $query->public()])
+                ->where('is_active', true)
+                ->orderByDesc('jobs_count')
+                ->orderBy('name')
+                ->take(10)
+                ->get(),
+        ]);
+    }
+
+    private function homepageJsonLd(string $canonicalUrl, string $description, $jobs): array
+    {
+        $organization = [
+            '@type' => 'Organization',
+            '@id' => url('/#organization'),
+            'name' => config('app.name', 'GalaxyJob'),
+            'url' => url('/'),
+            'logo' => url('/apple-touch-icon.png'),
+        ];
+
+        return [
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'WebSite',
+                '@id' => url('/#website'),
+                'name' => config('app.name', 'GalaxyJob'),
+                'url' => url('/'),
+                'description' => $description,
+                'publisher' => ['@id' => url('/#organization')],
+                'potentialAction' => [
+                    '@type' => 'SearchAction',
+                    'target' => route('jobs.index', ['keyword' => '{search_term_string}']),
+                    'query-input' => 'required name=search_term_string',
+                ],
+            ],
+            [
+                '@context' => 'https://schema.org',
+                ...$organization,
+            ],
+            [
+                '@context' => 'https://schema.org',
+                '@type' => 'BreadcrumbList',
+                'itemListElement' => [
+                    [
+                        '@type' => 'ListItem',
+                        'position' => 1,
+                        'name' => 'Home',
+                        'item' => $canonicalUrl,
+                    ],
+                ],
+            ],
+            ...$jobs->map(fn (Job $job) => [
+                '@context' => 'https://schema.org',
+                '@type' => 'JobPosting',
+                'title' => $job->title,
+                'description' => Str::limit(strip_tags($job->description), 500),
+                'datePosted' => $job->created_at?->toDateString(),
+                'validThrough' => $job->deadline?->endOfDay()->toAtomString(),
+                'employmentType' => strtoupper($job->job_type),
+                'url' => route('jobs.show', $job),
+                'hiringOrganization' => [
+                    '@type' => 'Organization',
+                    'name' => $job->company?->name,
+                    'sameAs' => $job->company?->website,
+                    'logo' => $job->company?->logo ? url('/storage/'.$job->company->logo) : url('/apple-touch-icon.png'),
+                ],
+                'jobLocation' => [
+                    '@type' => 'Place',
+                    'address' => [
+                        '@type' => 'PostalAddress',
+                        'addressLocality' => $job->location?->name,
+                        'addressCountry' => 'AF',
+                    ],
+                ],
+            ])->all(),
+        ];
     }
 }

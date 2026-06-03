@@ -8,6 +8,9 @@ use App\Http\Controllers\PublicController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PublicController::class, 'home'])->name('home');
+Route::get('/api/homepage/live', [PublicController::class, 'live'])->name('homepage.live');
+Route::get('/sitemap.xml', [PublicController::class, 'sitemap'])->name('sitemap');
+Route::get('/robots.txt', [PublicController::class, 'robots'])->name('robots');
 Route::get('/jobs', [PublicController::class, 'jobs'])->name('jobs.index');
 Route::get('/jobs/{job:slug}', [PublicController::class, 'showJob'])->name('jobs.show');
 Route::get('/companies', [PublicController::class, 'companies'])->name('companies.index');
