@@ -139,7 +139,7 @@ class PublicController extends Controller
 
         Job::with('company')->public()->latest()->limit(250)->get()->each(function (Job $job) use ($urls) {
             $urls->push([
-                'loc' => $this->absoluteUrl(route('jobs.show', $job, false)),
+                'loc' => $this->absoluteUrl(route('jobs.show', ['job' => $job->slug], false)),
                 'lastmod' => $job->updated_at?->toAtomString(),
                 'priority' => '0.7',
                 'changefreq' => 'daily',
@@ -153,7 +153,7 @@ class PublicController extends Controller
             ->get()
             ->each(function (Company $company) use ($urls) {
                 $urls->push([
-                    'loc' => $this->absoluteUrl(route('companies.show', $company, false)),
+                    'loc' => $this->absoluteUrl(route('companies.show', ['company' => $company->slug], false)),
                     'lastmod' => $company->updated_at?->toAtomString(),
                     'priority' => '0.6',
                     'changefreq' => 'weekly',
@@ -339,52 +339,9 @@ class PublicController extends Controller
                     'query-input' => 'required name=search_term_string',
                 ],
             ],
-            [
-                '@context' => 'https://schema.org',
-                ...$organization,
-            ],
-            [
-                '@context' => 'https://schema.org',
-                '@type' => 'BreadcrumbList',
-                'itemListElement' => [
-                    [
-                        '@type' => 'ListItem',
-                        'position' => 1,
-                        'name' => 'Home',
-                        'item' => $canonicalUrl,
-                    ],
-                ],
-            ],
-            ...$jobs->map(fn (Job $job) => [
-                '@context' => 'https://schema.org',
-                '@type' => 'JobPosting',
-                'title' => $job->title,
-                'description' => Str::limit(strip_tags($job->description), 500),
-                'datePosted' => $job->created_at?->toDateString(),
-                'validThrough' => $job->deadline?->endOfDay()->toAtomString(),
-                'employmentType' => strtoupper($job->job_type),
-                'url' => $this->absoluteUrl(route('jobs.show', $job, false)),
-                'hiringOrganization' => [
-                    '@type' => 'Organization',
-                    'name' => $job->company?->name,
-                    'sameAs' => $job->company?->website,
-                    'logo' => $job->company?->logo ? $this->absoluteUrl('/storage/'.$job->company->logo) : $this->absoluteUrl('/apple-touch-icon.png'),
-                ],
-                'jobLocation' => [
-                    '@type' => 'Place',
-                    'address' => [
-                        '@type' => 'PostalAddress',
-                        'addressLocality' => $job->location?->name,
-                        'addressCountry' => 'AF',
-                    ],
-                ],
-            ])->all(),
+            $organization,
+            ...$jobs->map(fn (Job $job) => $this->jobPostingJsonLd($job))->values()->all(),
         ];
-    }
-
-    private function absoluteUrl(string $path = '/'): string
-    {
-        return rtrim(config('app.url'), '/').'/'.ltrim($path, '/');
     }
 
     private function pageSeo(string $title, string $description, string $canonicalUrl, array $jsonLd): array
@@ -392,12 +349,76 @@ class PublicController extends Controller
         return [
             'title' => $title,
             'description' => $description,
-            'keywords' => 'Galaxy Jobs, Galaxy Technology, jobs Afghanistan, recruitment platform, career platform',
+            'keywords' => 'Galaxy Jobs, Galaxy Technology, Afghanistan jobs, recruitment platform',
             'canonical' => $canonicalUrl,
             'image' => $this->absoluteUrl('/apple-touch-icon.png'),
             'type' => 'website',
             'robots' => 'index, follow',
             'jsonLd' => $jsonLd,
+        ];
+    }
+
+    private function jobSeo(Job $job): array
+    {
+        $description = Str::limit(strip_tags($job->description), 160);
+        $canonicalUrl = $this->absoluteUrl(route('jobs.show', $job, false));
+
+        return $this->pageSeo(
+            $job->title.' at '.$job->company->name.' - Galaxy Jobs',
+            $description,
+            $canonicalUrl,
+            [$this->jobPostingJsonLd($job), $this->organizationJsonLd()]
+        );
+    }
+
+    private function companySeo(Company $company): array
+    {
+        $description = Str::limit(strip_tags($company->description), 160);
+        $canonicalUrl = $this->absoluteUrl(route('companies.show', $company, false));
+
+        return $this->pageSeo(
+            $company->name.' Careers - Galaxy Jobs',
+            $description,
+            $canonicalUrl,
+            [
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'Organization',
+                    'name' => $company->name,
+                    'url' => $canonicalUrl,
+                    'description' => $description,
+                ],
+                $this->organizationJsonLd(),
+            ]
+        );
+    }
+
+    private function jobPostingJsonLd(Job $job): array
+    {
+        $job->loadMissing(['company', 'location']);
+
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'JobPosting',
+            'title' => $job->title,
+            'description' => strip_tags($job->description),
+            'datePosted' => $job->created_at?->toDateString(),
+            'validThrough' => $job->deadline?->toAtomString(),
+            'employmentType' => strtoupper($job->job_type ?? 'FULL_TIME'),
+            'hiringOrganization' => [
+                '@type' => 'Organization',
+                'name' => $job->company?->name ?? config('app.name', 'Galaxy Jobs'),
+                'sameAs' => $this->absoluteUrl('/'),
+                'logo' => $this->absoluteUrl('/apple-touch-icon.png'),
+            ],
+            'jobLocation' => [
+                '@type' => 'Place',
+                'address' => [
+                    '@type' => 'PostalAddress',
+                    'addressLocality' => $job->location?->name ?? 'Afghanistan',
+                    'addressCountry' => 'AF',
+                ],
+            ],
         ];
     }
 
@@ -409,24 +430,28 @@ class PublicController extends Controller
             '@id' => $this->absoluteUrl('/#organization'),
             'name' => 'Galaxy Technology',
             'url' => $this->absoluteUrl('/'),
-            'email' => $this->contactInfo()['email'],
-            'telephone' => $this->contactInfo()['phone'],
-            'address' => [
-                '@type' => 'PostalAddress',
-                'streetAddress' => 'Muzafar Market',
-                'addressLocality' => 'Mazar Sharif',
-                'addressCountry' => 'AF',
-            ],
             'logo' => $this->absoluteUrl('/apple-touch-icon.png'),
+            'sameAs' => [
+                'https://galaxytechology.com',
+            ],
         ];
     }
 
     private function contactInfo(): array
     {
         return [
-            'email' => 'info@galaxytechology.com',
-            'phone' => '+93 797 548 234',
-            'address' => 'Mazar Sharif, Muzafar Market, Afghanistan',
+            'email' => 'galaxytech2030@gmail.com',
+            'phone' => '+93 77 197 8659',
+            'address' => 'Balkh, Afghanistan',
         ];
+    }
+
+    private function absoluteUrl(string $path): string
+    {
+        if (Str::startsWith($path, ['http://', 'https://'])) {
+            return $path;
+        }
+
+        return rtrim(config('app.url'), '/').'/'.ltrim($path, '/');
     }
 }
