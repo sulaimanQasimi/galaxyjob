@@ -1,0 +1,18 @@
+import { Form, Head } from '@inertiajs/react';
+import { Field, TextArea } from '@/components/portal/form-fields';
+import { PageHeader } from '@/components/portal/admin-table';
+import { Button } from '@/components/ui/button';
+import type { Category, Job, Location, Skill } from '@/types/portal';
+
+export default function JobForm({ title, action, method, job, categories, locations, skills }: { title: string; action: string; method: 'post' | 'patch'; job?: Job; categories: Category[]; locations: Location[]; skills: Skill[] }) {
+    const selected = new Set(job?.skills?.map((skill) => String(skill.id)) ?? []);
+    return <div className="p-6"><Head title={title} /><PageHeader title={title} description="Jobs are submitted as pending until an admin approves them." /><Form action={action} method={method} className="grid max-w-5xl gap-4 rounded-lg border bg-card p-5 md:grid-cols-2"><Field label="Title" name="title" value={job?.title} /><Field label="Deadline" name="deadline" type="date" value={job?.deadline?.slice(0, 10)} /><SelectField label="Category" name="category_id" items={categories} value={job?.category?.id ?? (job as any)?.category_id} /><SelectField label="Location" name="location_id" items={locations} value={job?.location?.id ?? (job as any)?.location_id} /><SelectOptions label="Job type" name="job_type" options={['full_time','part_time','contract','internship','remote']} value={job?.job_type ?? 'full_time'} /><SelectOptions label="Experience" name="experience_level" options={['entry','mid','senior']} value={job?.experience_level ?? 'entry'} /><Field label="Salary min" name="salary_min" type="number" value={job?.salary_min} /><Field label="Salary max" name="salary_max" type="number" value={job?.salary_max} /><Field label="Currency" name="salary_currency" value={job?.salary_currency ?? 'AFN'} /><label className="flex items-center gap-2 self-end text-sm"><input type="checkbox" name="is_featured" value="1" defaultChecked={job?.is_featured} /> Featured</label><div className="md:col-span-2"><TextArea label="Description" name="description" value={job?.description} /></div><div className="md:col-span-2"><TextArea label="Responsibilities" name="responsibilities" value={job?.responsibilities} /></div><div className="md:col-span-2"><TextArea label="Requirements" name="requirements" value={job?.requirements} /></div><div className="md:col-span-2"><TextArea label="Benefits" name="benefits" value={job?.benefits} /></div><div className="md:col-span-2"><label className="mb-2 block text-sm font-medium">Skills</label><div className="grid gap-2 md:grid-cols-4">{skills.map((skill) => <label key={skill.id} className="flex items-center gap-2 rounded-md border p-2 text-sm"><input type="checkbox" name="skill_ids[]" value={skill.id} defaultChecked={selected.has(String(skill.id))} />{skill.name}</label>)}</div></div><Button className="md:col-span-2">Save job</Button></Form></div>;
+}
+
+function SelectField({ label, name, items, value }: { label: string; name: string; items: any[]; value?: any }) {
+    return <label className="grid gap-2 text-sm font-medium">{label}<select name={name} defaultValue={value ?? ''} className="rounded-md border bg-background px-3 py-2 font-normal"><option value="">Select</option>{items.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>;
+}
+
+function SelectOptions({ label, name, options, value }: { label: string; name: string; options: string[]; value?: any }) {
+    return <label className="grid gap-2 text-sm font-medium">{label}<select name={name} defaultValue={value} className="rounded-md border bg-background px-3 py-2 font-normal">{options.map((option) => <option key={option} value={option}>{option.replaceAll('_', ' ')}</option>)}</select></label>;
+}
