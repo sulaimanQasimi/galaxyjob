@@ -1,0 +1,28 @@
+<?php
+
+namespace App\Http\Requests;
+
+use Illuminate\Foundation\Http\FormRequest;
+
+class CompanyRequest extends FormRequest
+{
+    public function authorize(): bool
+    {
+        return $this->user()?->isEmployer() || $this->user()?->isAdmin();
+    }
+
+    public function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'logo' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'cover_image' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'industry' => ['nullable', 'string', 'max:255'],
+            'website' => ['nullable', 'url', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:50'],
+            'email' => ['nullable', 'email', 'max:255'],
+            'address' => ['nullable', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+        ];
+    }
+}
