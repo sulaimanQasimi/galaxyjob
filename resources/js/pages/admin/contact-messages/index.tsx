@@ -1,6 +1,7 @@
 import { Form, Head } from '@inertiajs/react';
 import { PageHeader, TableShell } from '@/components/portal/admin-table';
 import { Button } from '@/components/ui/button';
+import contactMessages from '@/routes/admin/contact-messages';
 
 export default function ContactMessagesIndex({ messages }: { messages: any }) {
     return (
@@ -23,11 +24,11 @@ export default function ContactMessagesIndex({ messages }: { messages: any }) {
                         <td className="px-4 py-3">
                             <div className="flex gap-2">
                                 {!message.is_read && (
-                                    <Form action={`/admin/contact-messages/${message.id}/read`} method="patch">
+                                    <Form {...contactMessages.read.form(message.id)}>
                                         <Button size="sm" variant="outline">Mark read</Button>
                                     </Form>
                                 )}
-                                <Form action={`/admin/contact-messages/${message.id}`} method="delete">
+                                <Form {...contactMessages.destroy.form(message.id)}>
                                     <Button size="sm" variant="destructive">Delete</Button>
                                 </Form>
                             </div>

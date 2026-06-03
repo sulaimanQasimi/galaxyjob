@@ -283,13 +283,15 @@ class PublicController extends Controller
 
     private function homepageLiveData(): array
     {
-        return Cache::remember('homepage.live', 60, fn () => [
+        return [
             'stats' => [
-                'jobs' => Job::public()->count(),
-                'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->count(),
-                'categories' => Category::where('is_active', true)->count(),
-                'candidates' => User::where('role', 'employee')->where('status', 'active')->count(),
-                'applications' => Application::count(),
+                ...Cache::remember('homepage.stats', 60, fn () => [
+                    'jobs' => Job::public()->count(),
+                    'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->count(),
+                    'categories' => Category::where('is_active', true)->count(),
+                    'candidates' => User::where('role', 'employee')->where('status', 'active')->count(),
+                    'applications' => Application::count(),
+                ]),
             ],
             'featured_jobs' => Job::with(['company', 'category', 'location'])
                 ->public()
@@ -309,7 +311,7 @@ class PublicController extends Controller
                 ->orderBy('name')
                 ->take(10)
                 ->get(),
-        ]);
+        ];
     }
 
     private function homepageJsonLd(string $canonicalUrl, string $description, $jobs): array

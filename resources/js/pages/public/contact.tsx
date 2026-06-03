@@ -6,6 +6,7 @@ import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import contact from '@/routes/contact';
 
 type ContactInfo = {
     email: string;
@@ -20,12 +21,12 @@ export default function Contact({ contactInfo, seo }: { contactInfo: ContactInfo
 
             <section className="bg-white py-16">
                 <div className="mx-auto max-w-7xl px-4">
-                    <p className="font-semibold text-emerald-700">Contact Us</p>
+                    <p className="font-semibold text-emerald-700">Galaxy Technology</p>
                     <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
-                        We would love to hear from you.
+                        Contact Us
                     </h1>
                     <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                        Contact Galaxy Jobs and Galaxy Technology for support, partnerships, hiring, or platform questions.
+                        We would love to hear from you. Contact Galaxy Jobs and Galaxy Technology for support, partnerships, hiring, or platform questions.
                     </p>
                 </div>
             </section>
@@ -40,7 +41,7 @@ export default function Contact({ contactInfo, seo }: { contactInfo: ContactInfo
 
             <section className="bg-white py-14">
                 <div className="mx-auto grid max-w-7xl gap-8 px-4 lg:grid-cols-[1fr_0.9fr]">
-                    <Form action="/contact" method="post" className="grid gap-4 rounded-2xl border bg-white p-6 shadow-sm">
+                    <Form {...contact.store.form()} className="grid gap-4 rounded-2xl border bg-white p-6 shadow-sm">
                         {({ errors, processing, recentlySuccessful }) => (
                             <>
                                 <h2 className="text-2xl font-bold">Send a message</h2>

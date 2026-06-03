@@ -11,6 +11,7 @@ export default function PublicLayout({
     children: React.ReactNode;
 }) {
     const { auth } = usePage().props as any;
+    const currentYear = new Date().getFullYear();
 
     return (
         <div className="min-h-screen bg-slate-50 text-slate-950">
@@ -56,7 +57,9 @@ export default function PublicLayout({
                     </div>
                 </div>
             </header>
+
             <main>{children}</main>
+
             <footer className="border-t bg-white text-slate-600">
                 <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-[1.3fr_1fr_1fr]">
                     <div>
@@ -75,10 +78,11 @@ export default function PublicLayout({
                             company behind the platform.
                         </p>
                         <p className="mt-4 text-sm text-slate-500">
-                            © {new Date().getFullYear()} Galaxy Jobs. Powered
-                            by Galaxy Technology.
+                            &copy; {currentYear} Galaxy Jobs. Powered by Galaxy
+                            Technology.
                         </p>
                     </div>
+
                     <div>
                         <h2 className="font-semibold text-slate-950">
                             Quick Links
@@ -116,6 +120,7 @@ export default function PublicLayout({
                             </Link>
                         </div>
                     </div>
+
                     <div>
                         <h2 className="font-semibold text-slate-950">
                             Contact Information

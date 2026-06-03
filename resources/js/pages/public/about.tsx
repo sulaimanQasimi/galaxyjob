@@ -7,6 +7,7 @@ import {
     Rocket,
     Users,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import PublicLayout from '@/components/portal/public-layout';
 import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import StatCard from '@/components/portal/stat-card';
@@ -28,12 +29,12 @@ export default function About({ stats, seo }: { stats: Stats; seo: SeoData }) {
 
             <section className="bg-white py-16">
                 <div className="mx-auto max-w-7xl px-4">
-                    <p className="font-semibold text-emerald-700">About Our Platform</p>
+                    <p className="font-semibold text-emerald-700">Galaxy Jobs</p>
                     <h1 className="mt-3 max-w-4xl text-4xl font-bold tracking-tight text-slate-950 md:text-6xl">
-                        Helping employers find talent and professionals find opportunities.
+                        About Our Platform
                     </h1>
                     <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">
-                        Galaxy Jobs is a recruitment and career platform developed and operated by Galaxy Technology.
+                        Helping employers find talent and professionals find opportunities through a recruitment and career platform developed and operated by Galaxy Technology.
                     </p>
                 </div>
             </section>
@@ -107,7 +108,7 @@ export default function About({ stats, seo }: { stats: Stats; seo: SeoData }) {
     );
 }
 
-function InfoCard({ title, icon: Icon, children }: { title: string; icon: typeof Rocket; children: React.ReactNode }) {
+function InfoCard({ title, icon: Icon, children }: { title: string; icon: typeof Rocket; children: ReactNode }) {
     return (
         <article className="rounded-2xl border bg-white p-6 shadow-sm">
             <Icon className="size-6 text-emerald-700" />
