@@ -17,13 +17,17 @@ export default function JobShow({ job, hasApplied, isSaved, relatedJobs }: { job
                 <div className="mx-auto grid max-w-7xl gap-4 px-4 py-8">
                     <div className="flex flex-wrap items-center gap-2"><StatusBadge status={job.job_type} /><StatusBadge status={job.experience_level} /></div>
                     <h1 className="text-3xl font-semibold">{job.title}</h1>
-                    <p className="text-muted-foreground">{job.company?.name} • {job.location?.name} • Deadline {job.deadline}</p>
+                    <p className="text-muted-foreground">{job.company?.name} - {job.location?.name} - Deadline {job.deadline}</p>
                     <div className="flex flex-wrap gap-2">
                         {canApply ? (
                             <>
-                                <Form action={`/jobs/${job.id}/apply`} method="post" encType="multipart/form-data" className="flex flex-wrap gap-2">
-                                    <input name="cv_file" type="file" className="rounded-md border bg-white px-3 py-2 text-sm" />
-                                    <Button disabled={hasApplied}><Send className="size-4" /> {hasApplied ? 'Applied' : 'Apply'}</Button>
+                                <Form action={`/jobs/${job.id}/apply`} method="post" encType="multipart/form-data" className="grid gap-2 sm:min-w-96">
+                                    <textarea name="cover_letter" placeholder="Short cover letter" className="min-h-24 rounded-md border bg-white px-3 py-2 text-sm" />
+                                    <div className="flex flex-wrap gap-2">
+                                        <input name="cv_file" type="file" className="rounded-md border bg-white px-3 py-2 text-sm" />
+                                        <Button disabled={hasApplied}><Send className="size-4" /> {hasApplied ? 'Applied' : 'Apply'}</Button>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">If no file is selected, your saved profile CV will be used when available.</p>
                                 </Form>
                                 <Form action={`/jobs/${job.id}/save`} method="post">
                                     <Button variant="outline"><Bookmark className="size-4" /> {isSaved ? 'Unsave' : 'Save'}</Button>
@@ -49,6 +53,7 @@ export default function JobShow({ job, hasApplied, isSaved, relatedJobs }: { job
                             <div><dt className="text-muted-foreground">Category</dt><dd>{job.category?.name}</dd></div>
                             <div><dt className="text-muted-foreground">Salary</dt><dd>{job.salary_min ? `${job.salary_min}-${job.salary_max} ${job.salary_currency}` : 'Negotiable'}</dd></div>
                             <div><dt className="text-muted-foreground">Experience</dt><dd>{job.experience_level}</dd></div>
+                            <div><dt className="text-muted-foreground">Views</dt><dd>{job.views_count ?? 0}</dd></div>
                         </dl>
                     </div>
                     {relatedJobs.map((related) => <JobCard key={related.id} job={related} />)}
@@ -60,8 +65,8 @@ export default function JobShow({ job, hasApplied, isSaved, relatedJobs }: { job
 
 function Block({ title, body }: { title: string; body?: string }) {
     if (!body) {
-return null;
-}
+        return null;
+    }
 
     return <section><h2 className="mb-2 text-xl font-semibold">{title}</h2><p className="whitespace-pre-line text-slate-700">{body}</p></section>;
 }

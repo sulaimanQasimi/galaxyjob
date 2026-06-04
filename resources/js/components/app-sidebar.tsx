@@ -41,6 +41,7 @@ export function AppSidebar() {
             ? [
                   { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
                   { title: 'Users', href: '/admin/users', icon: Users },
+                  { title: 'Moderation', href: '/admin/moderation', icon: ListChecks },
                   { title: 'Companies', href: '/admin/companies', icon: Building2 },
                   { title: 'Jobs', href: '/admin/jobs', icon: Briefcase },
                   { title: 'Categories', href: '/admin/categories', icon: Tags },
@@ -55,6 +56,7 @@ export function AppSidebar() {
                     { title: 'Dashboard', href: '/employer/dashboard', icon: LayoutGrid },
                     { title: 'Company', href: '/employer/company/edit', icon: Building2 },
                     { title: 'Jobs', href: '/employer/jobs', icon: Briefcase },
+                    { title: 'Candidates', href: '/employer/candidates', icon: Users },
                     { title: 'Post Job', href: '/employer/jobs/create', icon: FolderOpen },
                 ]
               : [

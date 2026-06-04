@@ -18,11 +18,13 @@ export default function JobsIndex({ jobs, filters, categories, locations }: { jo
             <section className="border-b bg-white">
                 <div className="mx-auto max-w-7xl px-4 py-8">
                     <h1 className="text-3xl font-semibold">Browse jobs</h1>
-                    <form onSubmit={submit} className="mt-5 grid gap-3 md:grid-cols-6">
+                    <form onSubmit={submit} className="mt-5 grid gap-3 md:grid-cols-8">
                         <Input className="md:col-span-2" name="search" placeholder="Search keyword" defaultValue={filters.search ?? ''} />
                         <select name="category_id" defaultValue={filters.category_id ?? ''} className="rounded-md border bg-white px-3 py-2 text-sm"><option value="">Category</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
                         <select name="location_id" defaultValue={filters.location_id ?? ''} className="rounded-md border bg-white px-3 py-2 text-sm"><option value="">Location</option>{locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select>
                         <select name="job_type" defaultValue={filters.job_type ?? ''} className="rounded-md border bg-white px-3 py-2 text-sm"><option value="">Type</option>{['full_time','part_time','contract','internship','remote'].map((v) => <option key={v} value={v}>{v.replaceAll('_', ' ')}</option>)}</select>
+                        <select name="experience_level" defaultValue={filters.experience_level ?? ''} className="rounded-md border bg-white px-3 py-2 text-sm"><option value="">Experience</option>{['entry','mid','senior'].map((v) => <option key={v} value={v}>{v}</option>)}</select>
+                        <Input name="salary_min" type="number" placeholder="Min salary" defaultValue={filters.salary_min ?? ''} />
                         <Button type="submit">Filter</Button>
                     </form>
                 </div>
