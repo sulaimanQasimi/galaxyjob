@@ -10,6 +10,7 @@ import { formatDate } from '@/lib/utils';
 import type { Paginated, Scholarship } from '@/types/portal';
 
 type Facets = {
+    categories: { id: number; name: string }[];
     countries: string[];
     studyLevels: string[];
     fundingTypes: string[];
@@ -65,6 +66,18 @@ export default function ScholarshipsIndex({
                             />
                         </div>
                         <select
+                            name="scholarship_category_id"
+                            defaultValue={filters.scholarship_category_id ?? ''}
+                            className="rounded-md border bg-white px-3 py-2 text-sm"
+                        >
+                            <option value="">Category</option>
+                            {facets.categories.map((item) => (
+                                <option key={item.id} value={item.id}>
+                                    {item.name}
+                                </option>
+                            ))}
+                        </select>
+                        <select
                             name="country"
                             defaultValue={filters.country ?? ''}
                             className="rounded-md border bg-white px-3 py-2 text-sm"
@@ -87,6 +100,16 @@ export default function ScholarshipsIndex({
                                     {item}
                                 </option>
                             ))}
+                        </select>
+                        <select
+                            name="language"
+                            defaultValue={filters.language ?? ''}
+                            className="rounded-md border bg-white px-3 py-2 text-sm"
+                        >
+                            <option value="">Language</option>
+                            <option value="en">English</option>
+                            <option value="fa">Dari</option>
+                            <option value="ps">Pashto</option>
                         </select>
                         <select
                             name="funding_type"

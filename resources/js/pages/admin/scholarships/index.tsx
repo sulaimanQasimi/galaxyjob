@@ -11,8 +11,10 @@ import type { Scholarship } from '@/types/portal';
 
 export default function ScholarshipsIndex({
     scholarships,
+    categories,
 }: {
     scholarships: any;
+    categories: any[];
 }) {
     return (
         <div className="grid gap-6 p-6">
@@ -21,7 +23,12 @@ export default function ScholarshipsIndex({
                 title="Scholarships"
                 description="Admin-only scholarship publishing. Public users can view details but cannot apply inside the portal."
             />
-            <ScholarshipForm action="/admin/scholarships" />
+            <Form action="/admin/scholarship-categories" method="post" className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-3">
+                <Field label="New category" name="name" />
+                <label className="flex items-center gap-2 self-end text-sm"><input type="checkbox" name="is_active" value="1" defaultChecked /> Active</label>
+                <Button className="self-end">Add category</Button>
+            </Form>
+            <ScholarshipForm action="/admin/scholarships" categories={categories} />
             <TableShell
                 page={scholarships}
                 columns={['Scholarship', 'Deadline', 'Visibility', 'Edit']}
@@ -65,6 +72,7 @@ export default function ScholarshipsIndex({
                                 action={`/admin/scholarships/${scholarship.id}`}
                                 method="patch"
                                 scholarship={scholarship}
+                                categories={categories}
                                 compact
                             />
                         </td>
@@ -79,11 +87,13 @@ function ScholarshipForm({
     action,
     method = 'post',
     scholarship,
+    categories,
     compact = false,
 }: {
     action: string;
     method?: 'post' | 'patch';
     scholarship?: Scholarship;
+    categories: any[];
     compact?: boolean;
 }) {
     return (
@@ -93,6 +103,7 @@ function ScholarshipForm({
             className={`grid gap-3 rounded-lg border bg-card p-4 ${compact ? 'min-w-96' : 'md:grid-cols-4'}`}
         >
             <Field label="Title" name="title" value={scholarship?.title} />
+            <select name="scholarship_category_id" defaultValue={(scholarship as any)?.scholarship_category_id ?? ''} className="rounded-md border bg-background px-3 py-2 text-sm"><option value="">Category</option>{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select>
             <Field
                 label="Provider"
                 name="provider"
@@ -113,6 +124,7 @@ function ScholarshipForm({
                 name="funding_type"
                 value={scholarship?.funding_type}
             />
+            <select name="language" defaultValue={(scholarship as any)?.language ?? 'en'} className="rounded-md border bg-background px-3 py-2 text-sm"><option value="en">English</option><option value="fa">Dari</option><option value="ps">Pashto</option></select>
             <Field
                 label="Deadline"
                 name="deadline"

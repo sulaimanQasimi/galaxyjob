@@ -88,12 +88,15 @@ export type Application = {
 };
 export type Scholarship = {
     id: number;
+    scholarship_category_id?: number | null;
     title: string;
     slug: string;
+    category?: { id: number; name: string; slug: string } | null;
     provider?: string | null;
     country?: string | null;
     study_level?: string | null;
     funding_type?: string | null;
+    language?: string;
     deadline?: string | null;
     summary?: string | null;
     description: string;

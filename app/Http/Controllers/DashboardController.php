@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\Company;
+use App\Models\ContactMessage;
 use App\Models\Job;
+use App\Models\Payment;
+use App\Models\Scholarship;
 use App\Models\User;
 use Inertia\Inertia;
 
@@ -39,6 +42,13 @@ class DashboardController extends Controller
             ],
             'pendingJobs' => Job::with(['company', 'category', 'location'])->where('status', 'pending')->latest()->take(6)->get(),
             'pendingCompanies' => Company::with('user')->where('verification_status', 'pending')->latest()->take(6)->get(),
+            'notifications' => [
+                'pendingJobs' => Job::where('status', 'pending')->count(),
+                'pendingCompanies' => Company::where('verification_status', 'pending')->count(),
+                'pendingPayments' => Payment::where('status', 'pending')->count(),
+                'unreadMessages' => ContactMessage::where('is_read', false)->count(),
+                'expiringScholarships' => Scholarship::where('is_published', true)->whereNotNull('deadline')->whereBetween('deadline', [now(), now()->addDays(14)])->count(),
+            ],
         ]);
     }
 
@@ -49,6 +59,14 @@ class DashboardController extends Controller
         return Inertia::render('employer/dashboard', [
             'company' => $company,
             'subscription' => request()->user()->activeEmployerSubscription()->with('package')->first(),
+            'renewalWarning' => ($subscription = request()->user()->activeEmployerSubscription()->with('package')->first())
+                ? [
+                    'expiresSoon' => $subscription->ends_at->isBefore(now()->addDays(7)),
+                    'lowPosts' => $subscription->remainingJobPosts() <= 1,
+                    'remainingPosts' => $subscription->remainingJobPosts(),
+                    'endsAt' => $subscription->ends_at,
+                ]
+                : null,
             'stats' => [
                 'jobs' => $company?->jobs()->count() ?? 0,
                 'activeJobs' => $company?->jobs()->where('status', 'active')->count() ?? 0,

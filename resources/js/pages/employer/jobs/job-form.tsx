@@ -73,9 +73,15 @@ export default function JobForm({
                     label="Work mode"
                     name="work_mode"
                     options={['on_site', 'hybrid', 'remote']}
-                    value={job?.work_mode ?? 'on_site'}
-                />
-                <SelectOptions
+                        value={job?.work_mode ?? 'on_site'}
+                    />
+                    <SelectOptions
+                        label="Language"
+                        name="language"
+                        options={['en', 'fa', 'ps']}
+                        value={(job as any)?.language ?? 'en'}
+                    />
+                    <SelectOptions
                     label="Experience"
                     name="experience_level"
                     options={['entry', 'mid', 'senior']}
@@ -116,6 +122,15 @@ export default function JobForm({
                             defaultChecked={job?.is_urgent}
                         />{' '}
                         Urgent
+                    </label>
+                    <label className="flex items-center gap-2 text-sm">
+                        <input
+                            type="checkbox"
+                            name="save_as_draft"
+                            value="1"
+                            defaultChecked={job?.status === 'draft'}
+                        />{' '}
+                        Save as draft
                     </label>
                 </div>
                 <div className="md:col-span-2">

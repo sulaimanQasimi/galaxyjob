@@ -6,7 +6,7 @@ import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import { Button } from '@/components/ui/button';
 import type { Company, Job, Paginated } from '@/types/portal';
 
-export default function CompanyShow({ company, jobs, reviews, canReview, seo }: { company: Company; jobs: Paginated<Job>; reviews: any[]; canReview: boolean; seo: SeoData }) {
+export default function CompanyShow({ company, jobs, reviews, canReview, isSaved, seo }: { company: Company; jobs: Paginated<Job>; reviews: any[]; canReview: boolean; isSaved: boolean; seo: SeoData }) {
     const { auth } = usePage().props as any;
 
     return (
@@ -23,6 +23,7 @@ export default function CompanyShow({ company, jobs, reviews, canReview, seo }: 
                         <span>{company.reviews_count ?? 0} reviews</span>
                     </div>
                     <p className="mt-4 max-w-3xl">{company.description}</p>
+                    {auth?.user?.role === 'employee' && <Form action={`/companies/${company.id}/save`} method="post" className="mt-4"><Button variant="outline">{isSaved ? 'Unsave company' : 'Save company'}</Button></Form>}
                 </div>
             </section>
             <section className="mx-auto grid max-w-7xl gap-8 px-4 py-8 lg:grid-cols-[1fr_360px]">

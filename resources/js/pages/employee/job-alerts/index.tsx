@@ -6,11 +6,15 @@ import { formatDateTime } from '@/lib/utils';
 export default function JobAlerts({
     alerts,
     savedSearches,
+    scholarshipAlerts,
+    scholarshipCategories,
     categories,
     locations,
 }: {
     alerts: any;
     savedSearches: any[];
+    scholarshipAlerts: any[];
+    scholarshipCategories: any[];
     categories: any[];
     locations: any[];
 }) {
@@ -78,6 +82,18 @@ export default function JobAlerts({
                 </select>
                 <Button>Add alert</Button>
             </Form>
+            <Form
+                action="/employee/scholarship-alerts"
+                method="post"
+                className="mb-6 grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-5"
+            >
+                <input name="keyword" placeholder="Scholarship keyword" className="rounded-md border bg-background px-3 py-2 text-sm" />
+                <select name="scholarship_category_id" className="rounded-md border bg-background px-3 py-2 text-sm"><option value="">Scholarship category</option>{scholarshipCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+                <input name="country" placeholder="Country" className="rounded-md border bg-background px-3 py-2 text-sm" />
+                <input name="study_level" placeholder="Study level" className="rounded-md border bg-background px-3 py-2 text-sm" />
+                <Button>Add scholarship alert</Button>
+            </Form>
+            {scholarshipAlerts.length > 0 && <section className="mb-6 rounded-lg border bg-card p-4"><h2 className="font-semibold">Scholarship alerts</h2><div className="mt-3 grid gap-2 text-sm">{scholarshipAlerts.map((alert) => <div key={alert.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"><span>{alert.keyword || alert.category?.name || 'Any scholarship'}</span><Form action={`/employee/scholarship-alerts/${alert.id}`} method="delete"><Button size="sm" variant="destructive">Delete</Button></Form></div>)}</div></section>}
             <TableShell
                 page={alerts}
                 columns={[

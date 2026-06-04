@@ -30,6 +30,7 @@ export default function PublicLayout({
                         <Link href={home.url()}>Home</Link>
                         <Link href={jobs.index.url()}>Jobs</Link>
                         <Link href="/scholarships">Scholarships</Link>
+                        <Link href="/blog">Blog</Link>
                         <Link href={companies.index.url()}>Companies</Link>
                         <Link href="/about">About</Link>
                         <Link href="/contact">Contact</Link>
@@ -106,6 +107,12 @@ export default function PublicLayout({
                                 className="hover:text-emerald-700"
                             >
                                 Scholarships
+                            </Link>
+                            <Link
+                                href="/blog"
+                                className="hover:text-emerald-700"
+                            >
+                                Blog
                             </Link>
                             <Link
                                 href={companies.index.url()}
