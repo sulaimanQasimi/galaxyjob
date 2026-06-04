@@ -11,6 +11,7 @@ import {
     LayoutGrid,
     ListChecks,
     Mail,
+    ScrollText,
     MapPin,
     Package,
     Tags,
@@ -50,6 +51,7 @@ export function AppSidebar() {
                   { title: 'Contact Messages', href: '/admin/contact-messages', icon: Mail },
                   { title: 'Packages', href: '/admin/packages', icon: Package },
                   { title: 'Payments', href: '/admin/payments', icon: CreditCard },
+                  { title: 'Audit Logs', href: '/admin/audit-logs', icon: ScrollText },
               ]
             : role === 'employer'
               ? [
@@ -57,6 +59,7 @@ export function AppSidebar() {
                     { title: 'Company', href: '/employer/company/edit', icon: Building2 },
                     { title: 'Jobs', href: '/employer/jobs', icon: Briefcase },
                     { title: 'Candidates', href: '/employer/candidates', icon: Users },
+                    { title: 'Packages', href: '/employer/packages', icon: Package },
                     { title: 'Post Job', href: '/employer/jobs/create', icon: FolderOpen },
                 ]
               : [

@@ -12,6 +12,8 @@ use App\Models\ContactMessage;
 use App\Models\Job;
 use App\Models\Location;
 use App\Models\SavedJob;
+use App\Models\SavedSearch;
+use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -194,7 +196,8 @@ class PublicController extends Controller
 
     public function jobs(Request $request)
     {
-        $canonicalUrl = $this->absoluteUrl(route('jobs.index', $request->only(['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'experience_level', 'salary_min']), false));
+        $filterKeys = ['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'work_mode', 'experience_level', 'salary_min', 'salary_max', 'company_id', 'skill_id', 'deadline_from', 'deadline_to', 'is_featured', 'is_urgent', 'sort'];
+        $canonicalUrl = $this->absoluteUrl(route('jobs.index', $request->only($filterKeys), false));
         $description = 'Browse verified jobs in Afghanistan by keyword, category, location, salary, job type, and experience level.';
         $jobs = Job::with(['company', 'category', 'location'])
             ->public()
@@ -205,17 +208,31 @@ class PublicController extends Controller
             ->when($request->location_id, fn ($query, $id) => $query->where('location_id', $id))
             ->when($request->location && ! $request->location_id, fn ($query, $location) => $query->whereHas('location', fn ($q) => $q->where('name', $location)))
             ->when($request->job_type, fn ($query, $type) => $query->where('job_type', $type))
+            ->when($request->work_mode, fn ($query, $mode) => $query->where('work_mode', $mode))
             ->when($request->experience_level, fn ($query, $level) => $query->where('experience_level', $level))
             ->when($request->salary_min, fn ($query, $min) => $query->where('salary_max', '>=', $min))
-            ->latest()
+            ->when($request->salary_max, fn ($query, $max) => $query->where('salary_min', '<=', $max))
+            ->when($request->company_id, fn ($query, $companyId) => $query->where('company_id', $companyId))
+            ->when($request->skill_id, fn ($query, $skillId) => $query->whereHas('skills', fn ($skills) => $skills->where('skills.id', $skillId)))
+            ->when($request->deadline_from, fn ($query, $date) => $query->whereDate('deadline', '>=', $date))
+            ->when($request->deadline_to, fn ($query, $date) => $query->whereDate('deadline', '<=', $date))
+            ->when($request->boolean('is_featured'), fn ($query) => $query->where('is_featured', true))
+            ->when($request->boolean('is_urgent'), fn ($query) => $query->where('is_urgent', true))
+            ->when($request->sort === 'salary_high', fn ($query) => $query->orderByDesc('salary_max'))
+            ->when($request->sort === 'deadline_soon', fn ($query) => $query->orderBy('deadline'))
+            ->when($request->sort === 'featured', fn ($query) => $query->orderByDesc('is_featured')->latest())
+            ->when(! in_array($request->sort, ['salary_high', 'deadline_soon', 'featured'], true), fn ($query) => $query->latest())
             ->paginate(12)
             ->withQueryString();
 
         return Inertia::render('public/jobs/index', [
             'jobs' => $jobs,
-            'filters' => $request->only(['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'experience_level', 'salary_min']),
+            'filters' => $request->only($filterKeys),
             'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
+            'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->orderBy('name')->get(['id', 'name']),
+            'skills' => Skill::orderBy('name')->get(),
+            'savedSearches' => $request->user()?->savedSearches()->latest()->get() ?? [],
             'seo' => $this->pageSeo(
                 'Browse Verified Jobs in Afghanistan - Galaxy Jobs',
                 $description,
@@ -234,6 +251,38 @@ class PublicController extends Controller
                 'jobs in Afghanistan, Kabul jobs, remote jobs Afghanistan, NGO jobs Afghanistan, private company jobs',
             ),
         ]);
+    }
+
+    public function saveSearch(Request $request)
+    {
+        abort_unless($request->user()?->isEmployee(), 403);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'email_alerts' => ['nullable', 'boolean'],
+        ]);
+
+        $filters = collect($request->except(['name', 'email_alerts', '_token']))
+            ->filter(fn ($value) => filled($value))
+            ->all();
+
+        SavedSearch::create([
+            'user_id' => $request->user()->id,
+            'name' => $data['name'],
+            'filters' => $filters,
+            'email_alerts' => $request->boolean('email_alerts'),
+        ]);
+
+        if ($request->boolean('email_alerts')) {
+            $request->user()->jobAlerts()->create([
+                'keyword' => $filters['search'] ?? $filters['keyword'] ?? null,
+                'category_id' => $filters['category_id'] ?? null,
+                'location_id' => $filters['location_id'] ?? null,
+                'is_active' => true,
+            ]);
+        }
+
+        return back()->with('success', 'Search saved.');
     }
 
     public function showJob(Request $request, Job $job)

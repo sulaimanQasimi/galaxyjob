@@ -26,7 +26,7 @@ export default function EmployeeDashboard({ profile, profileCompleteness, stats,
                 </div>
                 <div className="grid gap-3">
                     <h2 className="font-semibold">Recommended jobs</h2>
-                    {recommendedJobs.slice(0, 4).map((job) => <JobCard key={job.id} job={job} />)}
+                    {recommendedJobs.slice(0, 4).map((job) => <div key={job.id} className="grid gap-2"><JobCard job={job} /><div className="rounded-md border bg-card px-3 py-2 text-xs text-muted-foreground"><span className="font-medium text-foreground">{job.match_score ?? 0}% match</span>{job.match_reasons?.length ? ` - ${job.match_reasons.join(' - ')}` : ''}</div></div>)}
                 </div>
             </section>
         </div>

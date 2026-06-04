@@ -2,7 +2,7 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { PageHeader, StatusBadge, TableShell } from '@/components/portal/admin-table';
 import { Button } from '@/components/ui/button';
 
-export default function EmployerJobsIndex({ jobs, company }: { jobs: any; company: any }) {
+export default function EmployerJobsIndex({ jobs, company, subscription }: { jobs: any; company: any; subscription?: any }) {
     return (
         <div className="p-6">
             <Head title="Employer jobs" />
@@ -11,6 +11,7 @@ export default function EmployerJobsIndex({ jobs, company }: { jobs: any; compan
                 <Button asChild><Link href="/employer/jobs/create">Post job</Link></Button>
                 <Button asChild variant="outline"><Link href="/employer/candidates">Search candidates</Link></Button>
             </div>
+            {subscription && <div className="mb-4 rounded-lg border bg-card p-4 text-sm">Package: <span className="font-medium">{subscription.package?.name}</span> - job posts used {subscription.job_posts_used}/{subscription.package?.job_posts}, featured used {subscription.featured_posts_used}/{subscription.package?.featured_posts}</div>}
             <TableShell page={jobs} columns={['Job', 'Status', 'Metrics', 'Actions']} render={(job: any) => (
                 <>
                     <td className="px-4 py-3"><div className="font-medium">{job.title}</div><div className="text-muted-foreground">{job.category?.name} - {job.location?.name}</div>{job.moderation_note && <div className="mt-1 text-xs text-amber-700">{job.moderation_note}</div>}</td>

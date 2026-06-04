@@ -40,6 +40,7 @@ export type Company = {
     jobs_count?: number;
     rating_avg?: number;
     reviews_count?: number;
+    verification_documents?: { id: number; document_type: string; file_path: string; status: string; note?: string }[];
     user?: { id: number; name: string; email: string };
 };
 export type Job = {
@@ -54,13 +55,16 @@ export type Job = {
     salary_max?: number;
     salary_currency: string;
     job_type: string;
+    work_mode?: string;
     experience_level: string;
     deadline: string;
     status: string;
     moderation_note?: string;
     is_featured: boolean;
+    is_urgent?: boolean;
     views_count?: number;
     match_score?: number;
+    match_reasons?: string[];
     applications_count?: number;
     company?: Company;
     category?: Category;

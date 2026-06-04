@@ -32,6 +32,7 @@ export default function CandidatesIndex({ candidates, filters, skills }: { candi
                             </div>
                             <div className="text-sm text-muted-foreground">{candidate.employee_profile?.experience_years ?? 0} years - {candidate.employee_profile?.expected_salary ?? 'Negotiable'} AFN</div>
                         </div>
+                        <div className="mt-3 rounded-md border px-3 py-2 text-xs"><span className="font-medium">{candidate.match_score ?? 0}% profile match</span><span className="text-muted-foreground"> {(candidate.match_reasons ?? []).join(' - ')}</span></div>
                         <p className="mt-3 font-medium">{candidate.employee_profile?.headline}</p>
                         <p className="mt-1 text-sm text-muted-foreground">{candidate.employee_profile?.summary}</p>
                         <div className="mt-3 flex flex-wrap gap-2 text-xs">{candidate.employee_profile?.skills?.map((skill: Skill) => <span key={skill.id} className="rounded-md border px-2 py-1">{skill.name}</span>)}</div>

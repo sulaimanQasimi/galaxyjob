@@ -22,7 +22,7 @@ export default function ModerationIndex({ jobs, companies }: { jobs: any; compan
                 <h2 className="mb-3 font-semibold">Pending companies</h2>
                 <TableShell page={companies} columns={['Company', 'Owner', 'Status', 'Action']} render={(company: any) => (
                     <>
-                        <td className="px-4 py-3 font-medium">{company.name}</td>
+                        <td className="px-4 py-3"><div className="font-medium">{company.name}</div><div className="mt-1 grid gap-1 text-xs">{(company.verification_documents ?? []).map((doc: any) => <a key={doc.id} className="text-emerald-700" href={`/storage/${doc.file_path}`}>{doc.document_type} - {doc.status}</a>)}</div></td>
                         <td className="px-4 py-3">{company.user?.email}</td>
                         <td className="px-4 py-3"><StatusBadge status={company.verification_status} /></td>
                         <td className="px-4 py-3"><ModerateCompany company={company} /></td>

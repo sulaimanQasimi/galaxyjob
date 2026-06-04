@@ -22,4 +22,9 @@ class Application extends Model
     {
         return $this->hasMany(ApplicationStatusUpdate::class);
     }
+
+    public function messages()
+    {
+        return $this->hasMany(ApplicationMessage::class);
+    }
 }

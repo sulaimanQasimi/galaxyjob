@@ -13,12 +13,14 @@ class Job extends Model
     protected $fillable = [
         'company_id', 'category_id', 'location_id', 'title', 'slug', 'description',
         'responsibilities', 'requirements', 'benefits', 'salary_min', 'salary_max',
-        'salary_currency', 'job_type', 'experience_level', 'deadline', 'status', 'moderation_note', 'is_featured', 'views_count',
+        'salary_currency', 'job_type', 'work_mode', 'experience_level', 'deadline',
+        'status', 'moderation_note', 'is_featured', 'is_urgent', 'views_count',
     ];
 
     protected $casts = [
         'deadline' => 'date',
         'is_featured' => 'boolean',
+        'is_urgent' => 'boolean',
     ];
 
     public function company()

@@ -44,6 +44,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('packages', [AdminController::class, 'storePackage'])->name('packages.store');
         Route::get('payments', [AdminController::class, 'payments'])->name('payments.index');
         Route::patch('payments/{payment}', [AdminController::class, 'updatePayment'])->name('payments.update');
+        Route::get('audit-logs', [AdminController::class, 'auditLogs'])->name('audit-logs.index');
         Route::get('moderation', [AdminController::class, 'moderation'])->name('moderation.index');
         Route::get('exports/{type}', [AdminController::class, 'export'])->name('exports.show');
         Route::get('contact-messages', [AdminController::class, 'contactMessages'])->name('contact-messages.index');
@@ -64,14 +65,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::patch('jobs/{job}/close', [EmployerController::class, 'closeJob'])->name('jobs.close');
         Route::get('jobs/{job}/applicants', [EmployerController::class, 'applicants'])->name('jobs.applicants');
         Route::patch('applications/{application}', [EmployerController::class, 'updateApplicant'])->name('applications.update');
+        Route::post('applications/{application}/messages', [EmployerController::class, 'storeApplicationMessage'])->name('applications.messages.store');
         Route::get('candidates', [EmployerController::class, 'candidates'])->name('candidates.index');
+        Route::get('packages', [EmployerController::class, 'packages'])->name('packages.index');
+        Route::post('payments', [EmployerController::class, 'storePayment'])->name('payments.store');
     });
 
     Route::prefix('employee')->name('employee.')->middleware('role:employee')->group(function () {
         Route::get('dashboard', [DashboardController::class, 'employee'])->name('dashboard');
         Route::get('profile/edit', [EmployeeController::class, 'profile'])->name('profile.edit');
         Route::post('profile', [EmployeeController::class, 'updateProfile'])->name('profile.update');
+        Route::get('profile/cv.pdf', [EmployeeController::class, 'downloadCv'])->name('profile.cv');
         Route::get('applications', [EmployeeController::class, 'applications'])->name('applications.index');
+        Route::post('applications/{application}/messages', [EmployeeController::class, 'storeApplicationMessage'])->name('applications.messages.store');
         Route::delete('applications/{application}', [EmployeeController::class, 'withdrawApplication'])->name('applications.destroy');
         Route::get('saved-jobs', [EmployeeController::class, 'savedJobs'])->name('saved-jobs.index');
         Route::get('job-alerts', [EmployeeController::class, 'alerts'])->name('job-alerts.index');
@@ -82,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::middleware(['auth', 'verified', 'role:employee'])->group(function () {
     Route::post('/companies/{company}/reviews', [PublicController::class, 'storeCompanyReview'])->name('companies.reviews.store');
+    Route::post('/jobs/searches', [PublicController::class, 'saveSearch'])->name('jobs.searches.store');
 });
 
 require __DIR__.'/settings.php';

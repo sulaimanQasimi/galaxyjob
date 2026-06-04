@@ -19,4 +19,9 @@ class Payment extends Model
     {
         return $this->belongsTo(EmployerPackage::class, 'employer_package_id');
     }
+
+    public function subscription()
+    {
+        return $this->hasOne(EmployerSubscription::class);
+    }
 }

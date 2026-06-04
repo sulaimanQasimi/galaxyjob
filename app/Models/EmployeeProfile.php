@@ -8,7 +8,7 @@ class EmployeeProfile extends Model
 {
     protected $fillable = [
         'user_id', 'headline', 'summary', 'phone', 'address', 'experience_years',
-        'education', 'expected_salary', 'cv_file',
+        'education', 'expected_salary', 'cv_file', 'portfolio_url', 'certifications', 'languages',
     ];
 
     public function user()

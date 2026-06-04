@@ -20,7 +20,10 @@ export default function CompanyEdit({ company }: { company?: Company }) {
                 <Field label="Address" name="address" value={company?.address} />
                 <Field label="Logo" name="logo" type="file" />
                 <Field label="Cover image" name="cover_image" type="file" />
+                <Field label="Verification document type" name="verification_document_type" value="Business license" />
+                <Field label="Verification document" name="verification_document" type="file" />
                 <div className="md:col-span-2"><TextArea label="Description" name="description" value={company?.description} /></div>
+                {company?.verification_documents?.length ? <div className="md:col-span-2 rounded-md border p-3 text-sm"><div className="font-medium">Uploaded verification documents</div>{company.verification_documents.map((doc: any) => <div key={doc.id} className="mt-2 flex flex-wrap items-center gap-2"><a className="text-emerald-700" href={`/storage/${doc.file_path}`}>{doc.document_type}</a><StatusBadge status={doc.status} />{doc.note && <span className="text-muted-foreground">{doc.note}</span>}</div>)}</div> : null}
                 <Button className="md:col-span-2">Save company</Button>
             </Form>
         </div>

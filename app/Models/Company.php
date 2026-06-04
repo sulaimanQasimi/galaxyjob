@@ -30,4 +30,9 @@ class Company extends Model
     {
         return $this->hasMany(CompanyReview::class);
     }
+
+    public function verificationDocuments()
+    {
+        return $this->hasMany(CompanyVerificationDocument::class);
+    }
 }

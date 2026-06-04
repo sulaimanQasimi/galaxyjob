@@ -2,11 +2,12 @@ import { Form, Head } from '@inertiajs/react';
 import { PageHeader, TableShell } from '@/components/portal/admin-table';
 import { Button } from '@/components/ui/button';
 
-export default function JobAlerts({ alerts, categories, locations }: { alerts: any; categories: any[]; locations: any[] }) {
+export default function JobAlerts({ alerts, savedSearches, categories, locations }: { alerts: any; savedSearches: any[]; categories: any[]; locations: any[] }) {
     return (
         <div className="p-6">
             <Head title="Job alerts" />
             <PageHeader title="Job alerts" description="Email alerts are checked hourly for new matching jobs." />
+            {savedSearches.length > 0 && <section className="mb-6 rounded-lg border bg-card p-4"><h2 className="font-semibold">Saved searches</h2><div className="mt-3 grid gap-2 text-sm">{savedSearches.map((search) => <div key={search.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-2"><span>{search.name}</span><span className="text-muted-foreground">{Object.entries(search.filters ?? {}).map(([key, value]) => `${key}: ${value}`).join(' - ')}</span></div>)}</div></section>}
             <Form action="/employee/job-alerts" method="post" className="mb-6 grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-4">
                 <input name="keyword" placeholder="Keyword" className="rounded-md border bg-background px-3 py-2 text-sm" />
                 <select name="category_id" className="rounded-md border bg-background px-3 py-2 text-sm"><option value="">Category</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select>

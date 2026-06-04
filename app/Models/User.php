@@ -59,6 +59,26 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(JobAlert::class);
     }
 
+    public function savedSearches()
+    {
+        return $this->hasMany(SavedSearch::class);
+    }
+
+    public function employerSubscriptions()
+    {
+        return $this->hasMany(EmployerSubscription::class);
+    }
+
+    public function payments()
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function activeEmployerSubscription()
+    {
+        return $this->hasOne(EmployerSubscription::class)->usable()->latestOfMany();
+    }
+
     public function companyReviews()
     {
         return $this->hasMany(CompanyReview::class);

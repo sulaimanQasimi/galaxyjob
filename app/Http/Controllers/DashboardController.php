@@ -48,6 +48,7 @@ class DashboardController extends Controller
 
         return Inertia::render('employer/dashboard', [
             'company' => $company,
+            'subscription' => request()->user()->activeEmployerSubscription()->with('package')->first(),
             'stats' => [
                 'jobs' => $company?->jobs()->count() ?? 0,
                 'activeJobs' => $company?->jobs()->where('status', 'active')->count() ?? 0,
@@ -56,6 +57,22 @@ class DashboardController extends Controller
                 'views' => $company?->jobs()->sum('views_count') ?? 0,
             ],
             'recentJobs' => $company?->jobs()->with(['category', 'location'])->withCount('applications')->latest()->take(6)->get() ?? [],
+            'analytics' => [
+                'topJobs' => $company?->jobs()->withCount('applications')->orderByDesc('views_count')->take(5)->get(['id', 'title', 'views_count']) ?? [],
+                'applicationsByStatus' => $company
+                    ? Application::whereHas('job', fn ($query) => $query->where('company_id', $company->id))
+                        ->selectRaw('status, count(*) as total')
+                        ->groupBy('status')
+                        ->pluck('total', 'status')
+                    : [],
+                'recentApplications' => $company
+                    ? Application::with(['user:id,name', 'job:id,title,company_id'])
+                        ->whereHas('job', fn ($query) => $query->where('company_id', $company->id))
+                        ->latest()
+                        ->take(6)
+                        ->get()
+                    : [],
+            ],
         ]);
     }
 
@@ -90,16 +107,31 @@ class DashboardController extends Controller
             ->get()
             ->map(function (Job $job) use ($profile, $savedCategoryIds) {
                 $score = 0;
+                $reasons = [];
                 $score += ($job->matching_skills_count ?? 0) * 12;
-                $score += in_array($job->category_id, $savedCategoryIds, true) ? 8 : 0;
-                $score += $profile && $job->salary_min && $profile->expected_salary && $job->salary_min >= ($profile->expected_salary * 0.8) ? 5 : 0;
-                $score += match ($job->experience_level) {
+                if (($job->matching_skills_count ?? 0) > 0) {
+                    $reasons[] = $job->matching_skills_count.' matching skills';
+                }
+                if (in_array($job->category_id, $savedCategoryIds, true)) {
+                    $score += 8;
+                    $reasons[] = 'Category matches saved jobs';
+                }
+                if ($profile && $job->salary_min && $profile->expected_salary && $job->salary_min >= ($profile->expected_salary * 0.8)) {
+                    $score += 5;
+                    $reasons[] = 'Salary is near your expectation';
+                }
+                $experienceScore = match ($job->experience_level) {
                     'entry' => ($profile?->experience_years ?? 0) <= 2 ? 5 : 1,
                     'mid' => ($profile?->experience_years ?? 0) >= 2 && ($profile?->experience_years ?? 0) <= 7 ? 5 : 1,
                     'senior' => ($profile?->experience_years ?? 0) >= 6 ? 5 : 1,
                     default => 0,
                 };
+                $score += $experienceScore;
+                if ($experienceScore >= 5) {
+                    $reasons[] = 'Experience level fits';
+                }
                 $job->match_score = $score;
+                $job->match_reasons = $reasons;
 
                 return $job;
             })
