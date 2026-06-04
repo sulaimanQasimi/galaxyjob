@@ -4,6 +4,7 @@ import {
     Building2,
     CheckCircle2,
     FileText,
+    GraduationCap,
     Send,
     UserPlus,
     Users,
@@ -20,7 +21,7 @@ import StatCard from '@/components/portal/stat-card';
 import { Button } from '@/components/ui/button';
 import { register } from '@/routes';
 import jobs from '@/routes/jobs';
-import type { Category, Company, Job, Location } from '@/types/portal';
+import type { Category, Company, Job, Location, Scholarship } from '@/types/portal';
 
 type HomeStats = {
     jobs?: number;
@@ -33,6 +34,8 @@ type LiveHomeData = {
     stats: HomeStats;
     featured_jobs: Job[];
     featured_companies: Company[];
+    featured_scholarships?: Scholarship[];
+    featured_posts?: any[];
     categories: Category[];
 };
 
@@ -43,6 +46,8 @@ export default function Home({
     categories,
     locations,
     topCompanies = [],
+    featuredScholarships = [],
+    featuredPosts = [],
     seo,
     liveUrl,
 }: {
@@ -52,6 +57,8 @@ export default function Home({
     categories: Category[];
     locations: Location[];
     topCompanies?: Company[];
+    featuredScholarships?: Scholarship[];
+    featuredPosts?: any[];
     seo: SeoData;
     liveUrl: string;
 }) {
@@ -59,6 +66,8 @@ export default function Home({
         stats,
         featured_jobs: featuredJobs.length ? featuredJobs : latestJobs,
         featured_companies: topCompanies,
+        featured_scholarships: featuredScholarships,
+        featured_posts: featuredPosts,
         categories,
     });
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -184,6 +193,24 @@ export default function Home({
                     ) : (
                         <EmptyState text="Categories will appear once the admin publishes them." />
                     )}
+                </div>
+            </section>
+
+            <section className="bg-white py-14">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader eyebrow="Education funding" title="Featured scholarships" description="Scholarship opportunities curated for public discovery." action={<Button asChild variant="outline"><Link href="/scholarships">View scholarships</Link></Button>} />
+                    <div className="grid gap-5 md:grid-cols-3">
+                        {(liveData.featured_scholarships ?? []).map((scholarship) => <Link key={scholarship.id} href={`/scholarships/${scholarship.slug}`} className="rounded-xl border bg-slate-50 p-5"><GraduationCap className="size-5 text-emerald-700" /><h3 className="mt-4 font-semibold">{scholarship.title}</h3><p className="mt-2 text-sm text-slate-600">{scholarship.provider ?? scholarship.country}</p></Link>)}
+                    </div>
+                </div>
+            </section>
+
+            <section className="bg-slate-50 py-14">
+                <div className="mx-auto max-w-7xl px-4">
+                    <SectionHeader eyebrow="Guides" title="Career advice" description="CV, interview, scholarship, workplace, and hiring guidance." action={<Button asChild variant="outline"><Link href="/blog">Read blog</Link></Button>} />
+                    <div className="grid gap-5 md:grid-cols-3">
+                        {(liveData.featured_posts ?? []).map((post) => <Link key={post.id} href={`/blog/${post.slug}`} className="rounded-xl border bg-white p-5"><div className="text-sm font-medium text-emerald-700">{post.category}</div><h3 className="mt-3 font-semibold">{post.title}</h3><p className="mt-2 text-sm text-slate-600">{post.summary}</p></Link>)}
+                    </div>
                 </div>
             </section>
 

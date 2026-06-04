@@ -3,12 +3,13 @@ import { PageHeader, StatGrid, StatusBadge } from '@/components/portal/admin-tab
 import { Button } from '@/components/ui/button';
 import type { Company, Job } from '@/types/portal';
 
-export default function AdminDashboard({ stats, pendingJobs, pendingCompanies }: { stats: Record<string, number>; pendingJobs: Job[]; pendingCompanies: Company[] }) {
+export default function AdminDashboard({ stats, pendingJobs, pendingCompanies, notifications }: { stats: Record<string, number>; pendingJobs: Job[]; pendingCompanies: Company[]; notifications: Record<string, number> }) {
     return (
         <div className="p-6">
             <Head title="Admin dashboard" />
             <PageHeader title="Admin dashboard" description="Platform overview and approval queue." />
             <StatGrid stats={stats} />
+            <section className="mt-6 rounded-lg border bg-card p-5"><h2 className="mb-3 font-semibold">Notification center</h2><div className="grid gap-2 text-sm md:grid-cols-5">{Object.entries(notifications ?? {}).map(([key, value]) => <div key={key} className="rounded-md border p-3"><div className="text-xl font-semibold">{value}</div><div className="capitalize text-muted-foreground">{key.replace(/([A-Z])/g, ' $1')}</div></div>)}</div></section>
             <div className="mt-6 grid gap-6 lg:grid-cols-2">
                 <Panel title="Pending jobs" href="/admin/jobs">{pendingJobs.map((job) => <Row key={job.id} title={job.title} meta={job.company?.name} status={job.status} />)}</Panel>
                 <Panel title="Pending companies" href="/admin/companies">{pendingCompanies.map((company) => <Row key={company.id} title={company.name} meta={company.user?.email} status={company.verification_status} />)}</Panel>
