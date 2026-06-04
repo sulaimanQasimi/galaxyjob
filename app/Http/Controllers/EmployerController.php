@@ -6,7 +6,9 @@ use App\Http\Requests\CompanyRequest;
 use App\Http\Requests\JobRequest;
 use App\Models\Application;
 use App\Models\ApplicationMessage;
+use App\Models\CandidateNote;
 use App\Models\Category;
+use App\Models\CompanyMember;
 use App\Models\Company;
 use App\Models\EmployerPackage;
 use App\Models\EmployerSubscription;
@@ -86,7 +88,7 @@ class EmployerController extends Controller
 
         $job = $company->jobs()->create($data + [
             'slug' => Slugs::unique(Job::class, $data['title']),
-            'status' => 'pending',
+            'status' => $request->boolean('save_as_draft') ? 'draft' : 'pending',
             'is_featured' => $request->boolean('is_featured'),
             'is_urgent' => $request->boolean('is_urgent'),
         ]);
@@ -97,7 +99,7 @@ class EmployerController extends Controller
         }
         Audits::record('job.submitted', $job, [], $job->only(['title', 'status', 'is_featured', 'is_urgent']));
 
-        return redirect()->route('employer.jobs.index')->with('success', 'Job submitted for approval.');
+        return redirect()->route('employer.jobs.index')->with('success', $job->status === 'draft' ? 'Job draft saved.' : 'Job submitted for approval.');
     }
 
     public function editJob(Job $job)
@@ -116,7 +118,7 @@ class EmployerController extends Controller
         $subscription = $this->activeSubscription();
         abort_if(! $job->is_featured && $request->boolean('is_featured') && (! $subscription || $subscription->remainingFeaturedPosts() <= 0), 403, 'Your active package has no featured posts remaining.');
         $old = $job->only(['title', 'status', 'is_featured', 'is_urgent']);
-        $job->update($data + ['slug' => Slugs::unique(Job::class, $data['title'], $job->id), 'status' => 'pending', 'is_featured' => $request->boolean('is_featured'), 'is_urgent' => $request->boolean('is_urgent')]);
+        $job->update($data + ['slug' => Slugs::unique(Job::class, $data['title'], $job->id), 'status' => $request->boolean('save_as_draft') ? 'draft' : 'pending', 'is_featured' => $request->boolean('is_featured'), 'is_urgent' => $request->boolean('is_urgent')]);
         $job->skills()->sync($skills);
         if (! $old['is_featured'] && $job->is_featured && $subscription) {
             $subscription->increment('featured_posts_used');
@@ -182,6 +184,21 @@ class EmployerController extends Controller
         return back()->with('success', 'Message sent.');
     }
 
+    public function storeCandidateNote(Request $request, User $user)
+    {
+        $company = $request->user()->company;
+        abort_unless($company && $company->verification_status === 'approved', 403);
+        $data = $request->validate(['note' => ['required', 'string', 'max:2000']]);
+        CandidateNote::create([
+            'company_id' => $company->id,
+            'user_id' => $user->id,
+            'author_id' => $request->user()->id,
+            'note' => $data['note'],
+        ]);
+
+        return back()->with('success', 'Candidate note saved.');
+    }
+
     public function closeJob(Job $job)
     {
         $this->authorizeEmployerJob($job);
@@ -214,9 +231,51 @@ class EmployerController extends Controller
                 ->paginate(15)
                 ->withQueryString()
                 ->through(fn (User $candidate) => $this->withCandidateMatch($candidate)),
+            'notes' => $request->user()->company?->id ? CandidateNote::with('author:id,name')->where('company_id', $request->user()->company->id)->latest()->get()->groupBy('user_id') : [],
             'filters' => $request->only(['search', 'experience_min', 'salary_max', 'skill_id']),
             'skills' => Skill::orderBy('name')->get(),
         ]);
+    }
+
+    public function calendar()
+    {
+        $company = request()->user()->company;
+
+        return Inertia::render('employer/calendar/index', [
+            'interviews' => $company
+                ? Application::with(['user:id,name,email', 'job:id,title,company_id', 'statusUpdates' => fn ($query) => $query->whereNotNull('interview_at')->latest()])
+                    ->whereHas('job', fn ($query) => $query->where('company_id', $company->id))
+                    ->latest()
+                    ->get()
+                : [],
+        ]);
+    }
+
+    public function team()
+    {
+        $company = request()->user()->company;
+
+        return Inertia::render('employer/team/index', [
+            'company' => $company,
+            'members' => $company?->members()->with('user:id,name,email')->latest()->paginate(15),
+        ]);
+    }
+
+    public function inviteTeamMember(Request $request)
+    {
+        $company = $request->user()->company;
+        abort_unless($company, 403);
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:255'],
+            'role' => ['nullable', 'string', 'max:50'],
+        ]);
+
+        CompanyMember::updateOrCreate(
+            ['company_id' => $company->id, 'email' => $data['email']],
+            ['role' => $data['role'] ?? 'member', 'status' => 'invited']
+        );
+
+        return back()->with('success', 'Team invitation recorded.');
     }
 
     public function packages()
@@ -234,6 +293,7 @@ class EmployerController extends Controller
             'employer_package_id' => ['required', 'exists:employer_packages,id'],
             'reference' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string', 'max:2000'],
+            'upgrade' => ['nullable', 'boolean'],
         ]);
         $package = EmployerPackage::findOrFail($data['employer_package_id']);
 
@@ -244,7 +304,7 @@ class EmployerController extends Controller
             'currency' => $package->currency,
             'status' => 'pending',
             'reference' => $data['reference'] ?? null,
-            'notes' => $data['notes'] ?? null,
+            'notes' => ($request->boolean('upgrade') ? 'Upgrade request. ' : '').($data['notes'] ?? ''),
         ]);
         Audits::record('employer.payment_requested', $payment, [], $payment->only(['amount', 'currency', 'status']));
 

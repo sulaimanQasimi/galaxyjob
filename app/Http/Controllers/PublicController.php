@@ -5,15 +5,19 @@ namespace App\Http\Controllers;
 use App\Http\Requests\ApplicationRequest;
 use App\Http\Requests\ContactMessageRequest;
 use App\Models\Application;
+use App\Models\BlogPost;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\CompanyReview;
 use App\Models\ContactMessage;
+use App\Models\EmployeeProfile;
 use App\Models\Job;
 use App\Models\Location;
+use App\Models\SavedCompany;
 use App\Models\SavedJob;
 use App\Models\SavedSearch;
 use App\Models\Scholarship;
+use App\Models\ScholarshipCategory;
 use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -36,6 +40,8 @@ class PublicController extends Controller
             'featuredJobs' => $liveData['featured_jobs'],
             'topCompanies' => $liveData['featured_companies'],
             'latestJobs' => $liveData['featured_jobs'],
+            'featuredScholarships' => $liveData['featured_scholarships'],
+            'featuredPosts' => $liveData['featured_posts'],
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
             'seo' => [
                 'title' => 'Galaxy Jobs - Find verified jobs in Afghanistan',
@@ -139,6 +145,7 @@ class PublicController extends Controller
             ['loc' => $this->absoluteUrl(route('contact', [], false)), 'priority' => '0.7', 'changefreq' => 'monthly'],
             ['loc' => $this->absoluteUrl(route('jobs.index', [], false)), 'priority' => '0.9', 'changefreq' => 'hourly'],
             ['loc' => $this->absoluteUrl(route('scholarships.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
+            ['loc' => $this->absoluteUrl(route('blog.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
             ['loc' => $this->absoluteUrl(route('companies.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
         ]);
 
@@ -191,6 +198,19 @@ class PublicController extends Controller
                 ]);
             });
 
+        BlogPost::published()
+            ->latest()
+            ->limit(250)
+            ->get()
+            ->each(function (BlogPost $post) use ($urls) {
+                $urls->push([
+                    'loc' => $this->absoluteUrl(route('blog.show', ['blogPost' => $post->slug], false)),
+                    'lastmod' => $post->updated_at?->toAtomString(),
+                    'priority' => '0.6',
+                    'changefreq' => 'weekly',
+                ]);
+            });
+
         $xml = view('sitemap', ['urls' => $urls])->render();
 
         return Response::make($xml, 200, ['Content-Type' => 'application/xml']);
@@ -224,6 +244,7 @@ class PublicController extends Controller
             ->when($request->location && ! $request->location_id, fn ($query, $location) => $query->whereHas('location', fn ($q) => $q->where('name', $location)))
             ->when($request->job_type, fn ($query, $type) => $query->where('job_type', $type))
             ->when($request->work_mode, fn ($query, $mode) => $query->where('work_mode', $mode))
+            ->when($request->language, fn ($query, $language) => $query->where('language', $language))
             ->when($request->experience_level, fn ($query, $level) => $query->where('experience_level', $level))
             ->when($request->salary_min, fn ($query, $min) => $query->where('salary_max', '>=', $min))
             ->when($request->salary_max, fn ($query, $max) => $query->where('salary_min', '<=', $max))
@@ -242,7 +263,7 @@ class PublicController extends Controller
 
         return Inertia::render('public/jobs/index', [
             'jobs' => $jobs,
-            'filters' => $request->only($filterKeys),
+            'filters' => $request->only([...$filterKeys, 'language']),
             'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
             'companies' => Company::where('verification_status', 'approved')->where('is_active', true)->orderBy('name')->get(['id', 'name']),
@@ -318,16 +339,19 @@ class PublicController extends Controller
 
     public function scholarships(Request $request)
     {
-        $canonicalUrl = $this->absoluteUrl(route('scholarships.index', $request->only(['search', 'country', 'study_level', 'funding_type']), false));
+        $canonicalUrl = $this->absoluteUrl(route('scholarships.index', $request->only(['search', 'country', 'study_level', 'funding_type', 'scholarship_category_id', 'language']), false));
         $description = 'Browse public scholarship opportunities, study funding, eligibility details, and official scholarship links through Galaxy Jobs.';
-        $scholarships = Scholarship::published()
+        $scholarships = Scholarship::with('category')
+            ->published()
             ->when($request->search, fn ($query, $search) => $query->where(fn ($q) => $q
                 ->where('title', 'like', "%{$search}%")
                 ->orWhere('provider', 'like', "%{$search}%")
                 ->orWhere('summary', 'like', "%{$search}%")))
+            ->when($request->scholarship_category_id, fn ($query, $id) => $query->where('scholarship_category_id', $id))
             ->when($request->country, fn ($query, $country) => $query->where('country', $country))
             ->when($request->study_level, fn ($query, $level) => $query->where('study_level', $level))
             ->when($request->funding_type, fn ($query, $type) => $query->where('funding_type', $type))
+            ->when($request->language, fn ($query, $language) => $query->where('language', $language))
             ->orderByDesc('is_featured')
             ->orderByRaw('deadline is null')
             ->orderBy('deadline')
@@ -336,8 +360,9 @@ class PublicController extends Controller
 
         return Inertia::render('public/scholarships/index', [
             'scholarships' => $scholarships,
-            'filters' => $request->only(['search', 'country', 'study_level', 'funding_type']),
+            'filters' => $request->only(['search', 'country', 'study_level', 'funding_type', 'scholarship_category_id', 'language']),
             'facets' => [
+                'categories' => ScholarshipCategory::where('is_active', true)->orderBy('name')->get(),
                 'countries' => Scholarship::published()->whereNotNull('country')->distinct()->orderBy('country')->pluck('country'),
                 'studyLevels' => Scholarship::published()->whereNotNull('study_level')->distinct()->orderBy('study_level')->pluck('study_level'),
                 'fundingTypes' => Scholarship::published()->whereNotNull('funding_type')->distinct()->orderBy('funding_type')->pluck('funding_type'),
@@ -376,6 +401,132 @@ class PublicController extends Controller
                 ->get(),
             'seo' => $this->scholarshipSeo($scholarship),
         ]);
+    }
+
+    public function blog(Request $request)
+    {
+        $canonicalUrl = $this->absoluteUrl(route('blog.index', $request->only(['search', 'category', 'language']), false));
+        $posts = BlogPost::published()
+            ->when($request->search, fn ($query, $search) => $query->where(fn ($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('summary', 'like', "%{$search}%")
+                ->orWhere('body', 'like', "%{$search}%")))
+            ->when($request->category, fn ($query, $category) => $query->where('category', $category))
+            ->when($request->language, fn ($query, $language) => $query->where('language', $language))
+            ->latest('published_at')
+            ->paginate(12)
+            ->withQueryString();
+
+        return Inertia::render('public/blog/index', [
+            'posts' => $posts,
+            'filters' => $request->only(['search', 'category', 'language']),
+            'categories' => BlogPost::published()->distinct()->orderBy('category')->pluck('category'),
+            'seo' => $this->pageSeo(
+                'Career Advice and Hiring Guides - Galaxy Jobs',
+                'Read CV tips, interview guidance, scholarship advice, workplace guidance, and hiring advice from Galaxy Jobs.',
+                $canonicalUrl,
+                [
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => 'Blog', 'url' => $canonicalUrl],
+                    ]),
+                    $this->itemListJsonLd($posts->getCollection()->map(fn (BlogPost $post) => [
+                        'name' => $post->title,
+                        'url' => $this->absoluteUrl(route('blog.show', $post, false)),
+                    ])->all()),
+                    $this->organizationJsonLd(),
+                ],
+                'career advice, CV tips, interview tips, scholarship advice, hiring advice',
+            ),
+        ]);
+    }
+
+    public function showBlogPost(BlogPost $blogPost)
+    {
+        abort_unless($blogPost->is_published, 404);
+        $canonicalUrl = $this->absoluteUrl(route('blog.show', $blogPost, false));
+
+        return Inertia::render('public/blog/show', [
+            'post' => $blogPost,
+            'relatedPosts' => BlogPost::published()->whereKeyNot($blogPost->id)->where('category', $blogPost->category)->latest()->take(4)->get(),
+            'seo' => $this->pageSeo(
+                $blogPost->title.' - Galaxy Jobs',
+                Str::limit(strip_tags($blogPost->summary ?: $blogPost->body), 160),
+                $canonicalUrl,
+                [
+                    [
+                        '@context' => 'https://schema.org',
+                        '@type' => 'Article',
+                        'headline' => $blogPost->title,
+                        'description' => $blogPost->summary,
+                        'datePublished' => $blogPost->published_at?->toAtomString(),
+                        'dateModified' => $blogPost->updated_at?->toAtomString(),
+                        'author' => ['@type' => 'Organization', 'name' => 'Galaxy Jobs'],
+                        'publisher' => ['@id' => $this->absoluteUrl('/#organization')],
+                        'mainEntityOfPage' => $canonicalUrl,
+                    ],
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => 'Blog', 'url' => $this->absoluteUrl(route('blog.index', [], false))],
+                        ['name' => $blogPost->title, 'url' => $canonicalUrl],
+                    ]),
+                    $this->organizationJsonLd(),
+                ],
+                implode(', ', [$blogPost->category, 'career advice', 'Galaxy Jobs']),
+            ),
+        ]);
+    }
+
+    public function showCandidate(EmployeeProfile $employeeProfile)
+    {
+        abort_unless($employeeProfile->is_public, 404);
+        $employeeProfile->load(['user:id,name,email', 'skills']);
+
+        return Inertia::render('public/candidates/show', [
+            'profile' => $employeeProfile,
+            'seo' => $this->pageSeo(
+                $employeeProfile->user->name.' - Candidate Profile - Galaxy Jobs',
+                Str::limit(strip_tags($employeeProfile->summary ?: $employeeProfile->headline), 160),
+                $this->absoluteUrl(route('candidates.show', $employeeProfile, false)),
+                [
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => $employeeProfile->user->name, 'url' => $this->absoluteUrl(route('candidates.show', $employeeProfile, false))],
+                    ]),
+                    $this->organizationJsonLd(),
+                ],
+            ),
+        ]);
+    }
+
+    public function jobsApi()
+    {
+        return Job::with(['company:id,name,slug', 'category:id,name', 'location:id,name'])->public()->latest()->take(50)->get();
+    }
+
+    public function scholarshipsApi()
+    {
+        return Scholarship::with('category:id,name,slug')->published()->latest()->take(50)->get();
+    }
+
+    public function jobsFeed()
+    {
+        return $this->feed('Galaxy Jobs Feed', route('jobs.index'), Job::with('company')->public()->latest()->take(50)->get()->map(fn (Job $job) => [
+            'title' => $job->title,
+            'url' => route('jobs.show', $job),
+            'description' => Str::limit(strip_tags($job->description), 300),
+            'updated_at' => $job->updated_at,
+        ]));
+    }
+
+    public function scholarshipsFeed()
+    {
+        return $this->feed('Galaxy Scholarships Feed', route('scholarships.index'), Scholarship::published()->latest()->take(50)->get()->map(fn (Scholarship $scholarship) => [
+            'title' => $scholarship->title,
+            'url' => route('scholarships.show', $scholarship),
+            'description' => Str::limit(strip_tags($scholarship->summary ?: $scholarship->description), 300),
+            'updated_at' => $scholarship->updated_at,
+        ]));
     }
 
     public function companies(Request $request)
@@ -425,8 +576,20 @@ class PublicController extends Controller
             'jobs' => $company->jobs()->with(['category', 'location'])->public()->latest()->paginate(10),
             'reviews' => $company->reviews()->with('user:id,name')->where('is_approved', true)->latest()->take(8)->get(),
             'canReview' => request()->user()?->isEmployee() ?? false,
+            'isSaved' => request()->user()?->savedCompanies()->where('company_id', $company->id)->exists() ?? false,
             'seo' => $this->companySeo($company),
         ]);
+    }
+
+    public function toggleCompanySave(Request $request, Company $company)
+    {
+        abort_unless($request->user()?->isEmployee(), 403);
+        abort_unless($company->verification_status === 'approved' && $company->is_active, 404);
+
+        $saved = SavedCompany::where('company_id', $company->id)->where('user_id', $request->user()->id)->first();
+        $saved ? $saved->delete() : SavedCompany::create(['company_id' => $company->id, 'user_id' => $request->user()->id]);
+
+        return back()->with('success', $saved ? 'Company removed from saved companies.' : 'Company saved.');
     }
 
     public function apply(ApplicationRequest $request, Job $job)
@@ -507,6 +670,17 @@ class PublicController extends Controller
                 ->whereHas('jobs', fn ($query) => $query->public())
                 ->orderByDesc('jobs_count')
                 ->take(6)
+                ->get(),
+            'featured_scholarships' => Scholarship::with('category')
+                ->published()
+                ->orderByDesc('is_featured')
+                ->latest()
+                ->take(6)
+                ->get(),
+            'featured_posts' => BlogPost::published()
+                ->orderByDesc('is_featured')
+                ->latest()
+                ->take(3)
                 ->get(),
             'categories' => Category::withCount(['jobs' => fn ($query) => $query->public()])
                 ->where('is_active', true)
@@ -776,5 +950,17 @@ class PublicController extends Controller
         }
 
         return rtrim(config('app.url'), '/').'/'.ltrim($path, '/');
+    }
+
+    private function feed(string $title, string $url, $items)
+    {
+        $entries = $items->map(function ($item) {
+            $date = $item['updated_at']?->toRfc2822String() ?? now()->toRfc2822String();
+
+            return '<item><title>'.e($item['title']).'</title><link>'.e($item['url']).'</link><description>'.e($item['description']).'</description><pubDate>'.$date.'</pubDate></item>';
+        })->join('');
+        $xml = '<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>'.e($title).'</title><link>'.e($url).'</link>'.$entries.'</channel></rss>';
+
+        return Response::make($xml, 200, ['Content-Type' => 'application/rss+xml']);
     }
 }

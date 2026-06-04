@@ -8,6 +8,9 @@ use App\Models\ApplicationMessage;
 use App\Models\Category;
 use App\Models\JobAlert;
 use App\Models\Location;
+use App\Models\SavedCompany;
+use App\Models\ScholarshipAlert;
+use App\Models\ScholarshipCategory;
 use App\Models\Skill;
 use App\Support\Audits;
 use Illuminate\Http\Request;
@@ -32,7 +35,10 @@ class EmployeeController extends Controller
 
         if ($request->hasFile('cv_file')) {
             $data['cv_file'] = $request->file('cv_file')->store('cvs', 'public');
+            $data['parsed_cv_data'] = $this->parseCv($request->file('cv_file')->getClientOriginalName(), $request->user()->email);
         }
+        $data['is_public'] = $request->boolean('is_public');
+        $data['public_slug'] = $data['public_slug'] ?: str($request->user()->name)->slug().'-'.$request->user()->id;
         $profile = $request->user()->employeeProfile()->updateOrCreate(['user_id' => $request->user()->id], $data);
         $profile->skills()->sync($skills);
         Audits::record('employee.profile_saved', $profile, [], $data);
@@ -122,6 +128,8 @@ class EmployeeController extends Controller
         return Inertia::render('employee/job-alerts/index', [
             'alerts' => request()->user()->jobAlerts()->with(['category', 'location'])->latest()->paginate(15),
             'savedSearches' => request()->user()->savedSearches()->latest()->get(),
+            'scholarshipAlerts' => request()->user()->scholarshipAlerts()->with('category')->latest()->get(),
+            'scholarshipCategories' => ScholarshipCategory::where('is_active', true)->orderBy('name')->get(),
             'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
         ]);
@@ -141,6 +149,42 @@ class EmployeeController extends Controller
         $jobAlert->delete();
 
         return back()->with('success', 'Job alert deleted.');
+    }
+
+    public function storeScholarshipAlert(Request $request)
+    {
+        $data = $request->validate([
+            'keyword' => ['nullable', 'string', 'max:255'],
+            'scholarship_category_id' => ['nullable', 'exists:scholarship_categories,id'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'study_level' => ['nullable', 'string', 'max:255'],
+            'funding_type' => ['nullable', 'string', 'max:255'],
+        ]);
+        $request->user()->scholarshipAlerts()->create($data + ['is_active' => true]);
+
+        return back()->with('success', 'Scholarship alert created.');
+    }
+
+    public function destroyScholarshipAlert(ScholarshipAlert $scholarshipAlert)
+    {
+        abort_unless($scholarshipAlert->user_id === request()->user()->id, 403);
+        $scholarshipAlert->delete();
+
+        return back()->with('success', 'Scholarship alert deleted.');
+    }
+
+    public function savedCompanies()
+    {
+        return Inertia::render('employee/saved-companies/index', [
+            'savedCompanies' => request()->user()->savedCompanies()->with(['company' => fn ($query) => $query->withCount(['jobs' => fn ($jobs) => $jobs->public()])])->latest()->paginate(15),
+        ]);
+    }
+
+    public function calendar()
+    {
+        return Inertia::render('employee/calendar/index', [
+            'interviews' => request()->user()->applications()->with(['job.company', 'statusUpdates' => fn ($query) => $query->whereNotNull('interview_at')->latest()])->latest()->get(),
+        ]);
     }
 
     private function basicPdf(array $lines): string
@@ -175,5 +219,14 @@ class EmployeeController extends Controller
         $pdf .= 'trailer << /Size '.(count($objects) + 1)." /Root 1 0 R >>\nstartxref\n{$xref}\n%%EOF";
 
         return $pdf;
+    }
+
+    private function parseCv(string $fileName, string $email): array
+    {
+        return [
+            'source' => $fileName,
+            'email' => $email,
+            'parsed_at' => now()->toIso8601String(),
+        ];
     }
 }
