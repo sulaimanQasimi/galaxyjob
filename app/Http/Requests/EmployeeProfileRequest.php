@@ -22,6 +22,8 @@ class EmployeeProfileRequest extends FormRequest
             'education' => ['nullable', 'string'],
             'expected_salary' => ['nullable', 'integer', 'min:0'],
             'cv_file' => ['nullable', 'file', 'mimes:pdf,doc,docx', 'max:5120'],
+            'skill_ids' => ['nullable', 'array'],
+            'skill_ids.*' => ['exists:skills,id'],
         ];
     }
 }

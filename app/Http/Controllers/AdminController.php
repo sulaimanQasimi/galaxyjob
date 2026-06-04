@@ -13,6 +13,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Support\Slugs;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Response;
 use Inertia\Inertia;
 
 class AdminController extends Controller
@@ -72,20 +73,84 @@ class AdminController extends Controller
 
     public function updateCompany(Request $request, Company $company)
     {
-        $company->update($request->validate(['verification_status' => ['required', 'in:pending,approved,rejected'], 'is_active' => ['required', 'boolean']]));
+        $company->update($request->validate(['verification_status' => ['required', 'in:pending,approved,rejected'], 'is_active' => ['required', 'boolean'], 'moderation_note' => ['nullable', 'string', 'max:2000']]));
         return back()->with('success', 'Company updated.');
     }
 
     public function updateJob(Request $request, Job $job)
     {
-        $job->update($request->validate(['status' => ['required', 'in:pending,active,rejected,closed'], 'is_featured' => ['required', 'boolean']]));
+        $job->update($request->validate(['status' => ['required', 'in:pending,active,rejected,closed'], 'is_featured' => ['required', 'boolean'], 'moderation_note' => ['nullable', 'string', 'max:2000']]));
         return back()->with('success', 'Job updated.');
     }
 
     public function updateApplication(Request $request, Application $application)
     {
-        $application->update($request->validate(['status' => ['required', 'in:pending,reviewed,shortlisted,rejected,hired']]));
+        $data = $request->validate(['status' => ['required', 'in:pending,reviewed,shortlisted,rejected,hired'], 'note' => ['nullable', 'string', 'max:2000'], 'interview_at' => ['nullable', 'date']]);
+        $application->update(['status' => $data['status']]);
+        $application->statusUpdates()->create(['user_id' => $request->user()->id, 'status' => $data['status'], 'note' => $data['note'] ?? null, 'interview_at' => $data['interview_at'] ?? null]);
         return back()->with('success', 'Application updated.');
+    }
+
+    public function moderation()
+    {
+        return Inertia::render('admin/moderation/index', [
+            'jobs' => Job::with(['company', 'category', 'location'])->where('status', 'pending')->latest()->paginate(10, ['*'], 'jobs_page'),
+            'companies' => Company::with('user')->where('verification_status', 'pending')->latest()->paginate(10, ['*'], 'companies_page'),
+        ]);
+    }
+
+    public function export(string $type)
+    {
+        $rows = match ($type) {
+            'users' => User::latest()->get()->map(fn ($user) => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'status' => $user->status,
+                'created_at' => $user->created_at,
+            ]),
+            'jobs' => Job::with('company:id,name')->latest()->get()->map(fn ($job) => [
+                'id' => $job->id,
+                'title' => $job->title,
+                'company' => $job->company?->name,
+                'status' => $job->status,
+                'views_count' => $job->views_count,
+                'created_at' => $job->created_at,
+            ]),
+            'applications' => Application::with(['user:id,name,email', 'job:id,title'])->latest()->get()->map(fn ($application) => [
+                'id' => $application->id,
+                'candidate' => $application->user?->name,
+                'email' => $application->user?->email,
+                'job' => $application->job?->title,
+                'status' => $application->status,
+                'created_at' => $application->created_at,
+            ]),
+            'payments' => Payment::with('user:id,name,email')->latest()->get()->map(fn ($payment) => [
+                'id' => $payment->id,
+                'user' => $payment->user?->name,
+                'email' => $payment->user?->email,
+                'amount' => $payment->amount,
+                'currency' => $payment->currency,
+                'status' => $payment->status,
+                'reference' => $payment->reference,
+                'created_at' => $payment->created_at,
+            ]),
+            default => abort(404),
+        };
+
+        $csv = fopen('php://temp', 'w+');
+        $first = $rows->first();
+        if ($first) {
+            fputcsv($csv, array_keys((array) $first));
+            $rows->each(fn ($row) => fputcsv($csv, (array) $row));
+        }
+        rewind($csv);
+
+        return Response::make(stream_get_contents($csv), 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename={$type}.csv",
+        ]);
     }
 
     public function storePackage(Request $request)

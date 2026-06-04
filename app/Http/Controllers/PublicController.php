@@ -7,6 +7,7 @@ use App\Http\Requests\ContactMessageRequest;
 use App\Models\Application;
 use App\Models\Category;
 use App\Models\Company;
+use App\Models\CompanyReview;
 use App\Models\ContactMessage;
 use App\Models\Job;
 use App\Models\Location;
@@ -220,6 +221,7 @@ class PublicController extends Controller
     {
         abort_unless($job->status === 'active' && $job->deadline->isFuture(), 404);
 
+        $job->increment('views_count');
         $job->load(['company', 'category', 'location', 'skills']);
 
         return Inertia::render('public/jobs/show', [
@@ -248,9 +250,14 @@ class PublicController extends Controller
     {
         abort_unless($company->verification_status === 'approved' && $company->is_active, 404);
 
+        $company->loadCount(['reviews as reviews_count' => fn ($query) => $query->where('is_approved', true)]);
+        $company->rating_avg = round((float) $company->reviews()->where('is_approved', true)->avg('rating'), 1);
+
         return Inertia::render('public/companies/show', [
             'company' => $company,
             'jobs' => $company->jobs()->with(['category', 'location'])->public()->latest()->paginate(10),
+            'reviews' => $company->reviews()->with('user:id,name')->where('is_approved', true)->latest()->take(8)->get(),
+            'canReview' => request()->user()?->isEmployee() ?? false,
         ]);
     }
 
@@ -261,14 +268,42 @@ class PublicController extends Controller
         $data = $request->validated();
         if ($request->hasFile('cv_file')) {
             $data['cv_file'] = $request->file('cv_file')->store('applications', 'public');
+        } elseif ($request->user()->employeeProfile?->cv_file) {
+            $data['cv_file'] = $request->user()->employeeProfile->cv_file;
         }
 
-        Application::firstOrCreate(
+        $application = Application::firstOrCreate(
             ['job_id' => $job->id, 'user_id' => $request->user()->id],
             $data + ['status' => 'pending']
         );
 
+        if ($application->wasRecentlyCreated) {
+            $application->statusUpdates()->create([
+                'user_id' => $request->user()->id,
+                'status' => 'pending',
+                'note' => 'Application submitted.',
+            ]);
+        }
+
         return back()->with('success', 'Application submitted.');
+    }
+
+    public function storeCompanyReview(Request $request, Company $company)
+    {
+        abort_unless($company->verification_status === 'approved' && $company->is_active, 404);
+
+        $data = $request->validate([
+            'rating' => ['required', 'integer', 'min:1', 'max:5'],
+            'title' => ['nullable', 'string', 'max:255'],
+            'body' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        CompanyReview::updateOrCreate(
+            ['company_id' => $company->id, 'user_id' => $request->user()->id],
+            $data + ['is_approved' => true],
+        );
+
+        return back()->with('success', 'Company review saved.');
     }
 
     public function toggleSave(Request $request, Job $job)

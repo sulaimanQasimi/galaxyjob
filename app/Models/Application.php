@@ -17,4 +17,9 @@ class Application extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function statusUpdates()
+    {
+        return $this->hasMany(ApplicationStatusUpdate::class);
+    }
 }

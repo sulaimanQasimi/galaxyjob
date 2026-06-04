@@ -44,6 +44,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('packages', [AdminController::class, 'storePackage'])->name('packages.store');
         Route::get('payments', [AdminController::class, 'payments'])->name('payments.index');
         Route::patch('payments/{payment}', [AdminController::class, 'updatePayment'])->name('payments.update');
+        Route::get('moderation', [AdminController::class, 'moderation'])->name('moderation.index');
+        Route::get('exports/{type}', [AdminController::class, 'export'])->name('exports.show');
         Route::get('contact-messages', [AdminController::class, 'contactMessages'])->name('contact-messages.index');
         Route::patch('contact-messages/{contactMessage}/read', [AdminController::class, 'markContactMessageRead'])->name('contact-messages.read');
         Route::delete('contact-messages/{contactMessage}', [AdminController::class, 'deleteContactMessage'])->name('contact-messages.destroy');
@@ -59,8 +61,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('jobs/{job}/edit', [EmployerController::class, 'editJob'])->name('jobs.edit');
         Route::patch('jobs/{job}', [EmployerController::class, 'updateJob'])->name('jobs.update');
         Route::delete('jobs/{job}', [EmployerController::class, 'destroyJob'])->name('jobs.destroy');
+        Route::patch('jobs/{job}/close', [EmployerController::class, 'closeJob'])->name('jobs.close');
         Route::get('jobs/{job}/applicants', [EmployerController::class, 'applicants'])->name('jobs.applicants');
         Route::patch('applications/{application}', [EmployerController::class, 'updateApplicant'])->name('applications.update');
+        Route::get('candidates', [EmployerController::class, 'candidates'])->name('candidates.index');
     });
 
     Route::prefix('employee')->name('employee.')->middleware('role:employee')->group(function () {
@@ -68,11 +72,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('profile/edit', [EmployeeController::class, 'profile'])->name('profile.edit');
         Route::post('profile', [EmployeeController::class, 'updateProfile'])->name('profile.update');
         Route::get('applications', [EmployeeController::class, 'applications'])->name('applications.index');
+        Route::delete('applications/{application}', [EmployeeController::class, 'withdrawApplication'])->name('applications.destroy');
         Route::get('saved-jobs', [EmployeeController::class, 'savedJobs'])->name('saved-jobs.index');
         Route::get('job-alerts', [EmployeeController::class, 'alerts'])->name('job-alerts.index');
         Route::post('job-alerts', [EmployeeController::class, 'storeAlert'])->name('job-alerts.store');
         Route::delete('job-alerts/{jobAlert}', [EmployeeController::class, 'destroyAlert'])->name('job-alerts.destroy');
     });
+});
+
+Route::middleware(['auth', 'verified', 'role:employee'])->group(function () {
+    Route::post('/companies/{company}/reviews', [PublicController::class, 'storeCompanyReview'])->name('companies.reviews.store');
 });
 
 require __DIR__.'/settings.php';

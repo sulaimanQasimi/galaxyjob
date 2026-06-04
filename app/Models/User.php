@@ -59,6 +59,11 @@ class User extends Authenticatable implements PasskeyUser
         return $this->hasMany(JobAlert::class);
     }
 
+    public function companyReviews()
+    {
+        return $this->hasMany(CompanyReview::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === 'admin';

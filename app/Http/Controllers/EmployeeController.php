@@ -3,9 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\EmployeeProfileRequest;
+use App\Models\Application;
 use App\Models\Category;
 use App\Models\JobAlert;
 use App\Models\Location;
+use App\Models\Skill;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -13,23 +15,43 @@ class EmployeeController extends Controller
 {
     public function profile()
     {
-        return Inertia::render('employee/profile/edit', ['profile' => request()->user()->employeeProfile]);
+        return Inertia::render('employee/profile/edit', [
+            'profile' => request()->user()->employeeProfile?->load('skills'),
+            'skills' => Skill::orderBy('name')->get(),
+        ]);
     }
 
     public function updateProfile(EmployeeProfileRequest $request)
     {
         $data = $request->validated();
+        $skills = $data['skill_ids'] ?? [];
+        unset($data['skill_ids']);
+
         if ($request->hasFile('cv_file')) {
             $data['cv_file'] = $request->file('cv_file')->store('cvs', 'public');
         }
-        $request->user()->employeeProfile()->updateOrCreate(['user_id' => $request->user()->id], $data);
+        $profile = $request->user()->employeeProfile()->updateOrCreate(['user_id' => $request->user()->id], $data);
+        $profile->skills()->sync($skills);
 
         return back()->with('success', 'Profile saved.');
     }
 
     public function applications()
     {
-        return Inertia::render('employee/applications/index', ['applications' => request()->user()->applications()->with(['job.company', 'job.category', 'job.location'])->latest()->paginate(15)]);
+        return Inertia::render('employee/applications/index', ['applications' => request()->user()->applications()->with(['job.company', 'job.category', 'job.location', 'statusUpdates.user'])->latest()->paginate(15)]);
+    }
+
+    public function withdrawApplication(Application $application)
+    {
+        abort_unless($application->user_id === request()->user()->id, 403);
+        $application->statusUpdates()->create([
+            'user_id' => request()->user()->id,
+            'status' => 'withdrawn',
+            'note' => 'Application withdrawn by candidate.',
+        ]);
+        $application->delete();
+
+        return back()->with('success', 'Application withdrawn.');
     }
 
     public function savedJobs()

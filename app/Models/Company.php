@@ -11,7 +11,7 @@ class Company extends Model
 
     protected $fillable = [
         'user_id', 'name', 'slug', 'logo', 'cover_image', 'industry', 'website',
-        'phone', 'email', 'address', 'description', 'verification_status', 'is_active',
+        'phone', 'email', 'address', 'description', 'verification_status', 'moderation_note', 'company_size', 'is_active',
     ];
 
     protected $casts = ['is_active' => 'boolean'];
@@ -24,5 +24,10 @@ class Company extends Model
     public function jobs()
     {
         return $this->hasMany(Job::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(CompanyReview::class);
     }
 }
