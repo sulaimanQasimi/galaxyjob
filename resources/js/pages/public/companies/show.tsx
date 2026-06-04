@@ -1,16 +1,17 @@
-import { Form, Head, usePage } from '@inertiajs/react';
+import { Form, usePage } from '@inertiajs/react';
 import JobCard from '@/components/portal/job-card';
 import Pagination from '@/components/portal/pagination';
 import PublicLayout from '@/components/portal/public-layout';
+import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import { Button } from '@/components/ui/button';
 import type { Company, Job, Paginated } from '@/types/portal';
 
-export default function CompanyShow({ company, jobs, reviews, canReview }: { company: Company; jobs: Paginated<Job>; reviews: any[]; canReview: boolean }) {
+export default function CompanyShow({ company, jobs, reviews, canReview, seo }: { company: Company; jobs: Paginated<Job>; reviews: any[]; canReview: boolean; seo: SeoData }) {
     const { auth } = usePage().props as any;
 
     return (
         <PublicLayout>
-            <Head title={company.name} />
+            <SeoHead seo={seo} />
             <section className="border-b bg-white">
                 <div className="mx-auto max-w-7xl px-4 py-8">
                     <h1 className="text-3xl font-semibold">{company.name}</h1>

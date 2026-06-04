@@ -9,6 +9,7 @@ export type SeoData = {
     image: string;
     type?: string;
     robots?: string;
+    locale?: string;
     jsonLd?: unknown[];
 };
 
@@ -37,7 +38,29 @@ export default function SeoHead({ seo }: { seo: SeoData }) {
                 content={seo.robots ?? 'index, follow'}
             />
             <link head-key="canonical" rel="canonical" href={canonical} />
+            <link
+                head-key="alternate-en"
+                rel="alternate"
+                hrefLang="en"
+                href={canonical}
+            />
+            <link
+                head-key="alternate-default"
+                rel="alternate"
+                hrefLang="x-default"
+                href={canonical}
+            />
             <meta head-key="og:title" property="og:title" content={seo.title} />
+            <meta
+                head-key="og:site_name"
+                property="og:site_name"
+                content="Galaxy Jobs"
+            />
+            <meta
+                head-key="og:locale"
+                property="og:locale"
+                content={seo.locale ?? 'en_US'}
+            />
             <meta
                 head-key="og:description"
                 property="og:description"
@@ -59,6 +82,11 @@ export default function SeoHead({ seo }: { seo: SeoData }) {
                 head-key="twitter:title"
                 name="twitter:title"
                 content={seo.title}
+            />
+            <meta
+                head-key="twitter:url"
+                name="twitter:url"
+                content={canonical}
             />
             <meta
                 head-key="twitter:description"

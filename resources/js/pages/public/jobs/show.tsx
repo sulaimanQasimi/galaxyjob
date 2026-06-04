@@ -1,18 +1,19 @@
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Link, usePage } from '@inertiajs/react';
 import { Bookmark, Send } from 'lucide-react';
 import JobCard from '@/components/portal/job-card';
 import PublicLayout from '@/components/portal/public-layout';
+import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import StatusBadge from '@/components/portal/status-badge';
 import { Button } from '@/components/ui/button';
 import type { Job } from '@/types/portal';
 
-export default function JobShow({ job, hasApplied, isSaved, relatedJobs }: { job: Job; hasApplied: boolean; isSaved: boolean; relatedJobs: Job[] }) {
+export default function JobShow({ job, hasApplied, isSaved, relatedJobs, seo }: { job: Job; hasApplied: boolean; isSaved: boolean; relatedJobs: Job[]; seo: SeoData }) {
     const { auth } = usePage().props as any;
     const canApply = auth?.user?.role === 'employee';
 
     return (
         <PublicLayout>
-            <Head title={job.title} />
+            <SeoHead seo={seo} />
             <section className="border-b bg-white">
                 <div className="mx-auto grid max-w-7xl gap-4 px-4 py-8">
                     <div className="flex flex-wrap items-center gap-2"><StatusBadge status={job.job_type} /><StatusBadge status={job.experience_level} /></div>

@@ -1,12 +1,13 @@
-import { Head, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import CompanyCard from '@/components/portal/company-card';
 import Pagination from '@/components/portal/pagination';
 import PublicLayout from '@/components/portal/public-layout';
+import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Company, Paginated } from '@/types/portal';
 
-export default function CompaniesIndex({ companies, filters }: { companies: Paginated<Company>; filters: any }) {
+export default function CompaniesIndex({ companies, filters, seo }: { companies: Paginated<Company>; filters: any; seo: SeoData }) {
     function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         router.get('/companies', Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveState: true });
@@ -14,7 +15,7 @@ export default function CompaniesIndex({ companies, filters }: { companies: Pagi
 
     return (
         <PublicLayout>
-            <Head title="Companies" />
+            <SeoHead seo={seo} />
             <div className="mx-auto max-w-7xl px-4 py-8">
                 <h1 className="text-3xl font-semibold">Companies</h1>
                 <form onSubmit={submit} className="mt-5 flex gap-2"><Input name="search" defaultValue={filters.search ?? ''} placeholder="Search companies" /><Button>Search</Button></form>

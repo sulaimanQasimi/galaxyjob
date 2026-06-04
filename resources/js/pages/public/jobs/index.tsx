@@ -1,12 +1,13 @@
-import { Head, router } from '@inertiajs/react';
+import { router } from '@inertiajs/react';
 import JobCard from '@/components/portal/job-card';
 import Pagination from '@/components/portal/pagination';
 import PublicLayout from '@/components/portal/public-layout';
+import SeoHead, { type SeoData } from '@/components/portal/seo-head';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import type { Category, Job, Location, Paginated } from '@/types/portal';
 
-export default function JobsIndex({ jobs, filters, categories, locations }: { jobs: Paginated<Job>; filters: any; categories: Category[]; locations: Location[] }) {
+export default function JobsIndex({ jobs, filters, categories, locations, seo }: { jobs: Paginated<Job>; filters: any; categories: Category[]; locations: Location[]; seo: SeoData }) {
     function submit(event: React.FormEvent<HTMLFormElement>) {
         event.preventDefault();
         router.get('/jobs', Object.fromEntries(new FormData(event.currentTarget).entries()), { preserveState: true });
@@ -14,7 +15,7 @@ export default function JobsIndex({ jobs, filters, categories, locations }: { jo
 
     return (
         <PublicLayout>
-            <Head title="Jobs" />
+            <SeoHead seo={seo} />
             <section className="border-b bg-white">
                 <div className="mx-auto max-w-7xl px-4 py-8">
                     <h1 className="text-3xl font-semibold">Browse jobs</h1>

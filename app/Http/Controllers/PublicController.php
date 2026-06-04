@@ -194,6 +194,8 @@ class PublicController extends Controller
 
     public function jobs(Request $request)
     {
+        $canonicalUrl = $this->absoluteUrl(route('jobs.index', $request->only(['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'experience_level', 'salary_min']), false));
+        $description = 'Browse verified jobs in Afghanistan by keyword, category, location, salary, job type, and experience level.';
         $jobs = Job::with(['company', 'category', 'location'])
             ->public()
             ->when($request->search ?? $request->keyword, fn ($query, $search) => $query->where(fn ($q) => $q
@@ -214,6 +216,23 @@ class PublicController extends Controller
             'filters' => $request->only(['search', 'keyword', 'category_id', 'location_id', 'location', 'job_type', 'experience_level', 'salary_min']),
             'categories' => Category::where('is_active', true)->orderBy('name')->get(),
             'locations' => Location::where('is_active', true)->orderBy('name')->get(),
+            'seo' => $this->pageSeo(
+                'Browse Verified Jobs in Afghanistan - Galaxy Jobs',
+                $description,
+                $canonicalUrl,
+                [
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => 'Jobs', 'url' => $canonicalUrl],
+                    ]),
+                    $this->itemListJsonLd($jobs->getCollection()->map(fn (Job $job) => [
+                        'name' => $job->title,
+                        'url' => $this->absoluteUrl(route('jobs.show', $job, false)),
+                    ])->all()),
+                    $this->organizationJsonLd(),
+                ],
+                'jobs in Afghanistan, Kabul jobs, remote jobs Afghanistan, NGO jobs Afghanistan, private company jobs',
+            ),
         ]);
     }
 
@@ -229,20 +248,42 @@ class PublicController extends Controller
             'hasApplied' => $request->user()?->applications()->where('job_id', $job->id)->exists() ?? false,
             'isSaved' => $request->user()?->savedJobs()->where('job_id', $job->id)->exists() ?? false,
             'relatedJobs' => Job::with(['company', 'category', 'location'])->public()->where('category_id', $job->category_id)->whereKeyNot($job->id)->take(4)->get(),
+            'seo' => $this->jobSeo($job),
         ]);
     }
 
     public function companies(Request $request)
     {
+        $canonicalUrl = $this->absoluteUrl(route('companies.index', $request->only('search'), false));
+        $description = 'Explore verified employers and company profiles hiring through Galaxy Jobs in Afghanistan.';
+        $companies = Company::withCount(['jobs' => fn ($query) => $query->public()])
+            ->where('verification_status', 'approved')
+            ->where('is_active', true)
+            ->when($request->search, fn ($query, $search) => $query->where('name', 'like', "%{$search}%"))
+            ->latest()
+            ->paginate(12)
+            ->withQueryString();
+
         return Inertia::render('public/companies/index', [
-            'companies' => Company::withCount(['jobs' => fn ($query) => $query->public()])
-                ->where('verification_status', 'approved')
-                ->where('is_active', true)
-                ->when($request->search, fn ($query, $search) => $query->where('name', 'like', "%{$search}%"))
-                ->latest()
-                ->paginate(12)
-                ->withQueryString(),
+            'companies' => $companies,
             'filters' => $request->only('search'),
+            'seo' => $this->pageSeo(
+                'Verified Companies Hiring in Afghanistan - Galaxy Jobs',
+                $description,
+                $canonicalUrl,
+                [
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => 'Companies', 'url' => $canonicalUrl],
+                    ]),
+                    $this->itemListJsonLd($companies->getCollection()->map(fn (Company $company) => [
+                        'name' => $company->name,
+                        'url' => $this->absoluteUrl(route('companies.show', $company, false)),
+                    ])->all()),
+                    $this->organizationJsonLd(),
+                ],
+                'companies hiring Afghanistan, verified employers Afghanistan, Kabul companies, Afghanistan careers',
+            ),
         ]);
     }
 
@@ -258,6 +299,7 @@ class PublicController extends Controller
             'jobs' => $company->jobs()->with(['category', 'location'])->public()->latest()->paginate(10),
             'reviews' => $company->reviews()->with('user:id,name')->where('is_approved', true)->latest()->take(8)->get(),
             'canReview' => request()->user()?->isEmployee() ?? false,
+            'seo' => $this->companySeo($company),
         ]);
     }
 
@@ -379,12 +421,12 @@ class PublicController extends Controller
         ];
     }
 
-    private function pageSeo(string $title, string $description, string $canonicalUrl, array $jsonLd): array
+    private function pageSeo(string $title, string $description, string $canonicalUrl, array $jsonLd, ?string $keywords = null): array
     {
         return [
             'title' => $title,
             'description' => $description,
-            'keywords' => 'Galaxy Jobs, Galaxy Technology, Afghanistan jobs, recruitment platform',
+            'keywords' => $keywords ?? 'Galaxy Jobs, Galaxy Technology, Afghanistan jobs, recruitment platform, verified employers',
             'canonical' => $canonicalUrl,
             'image' => $this->absoluteUrl('/apple-touch-icon.png'),
             'type' => 'website',
@@ -402,7 +444,16 @@ class PublicController extends Controller
             $job->title.' at '.$job->company->name.' - Galaxy Jobs',
             $description,
             $canonicalUrl,
-            [$this->jobPostingJsonLd($job), $this->organizationJsonLd()]
+            [
+                $this->jobPostingJsonLd($job),
+                $this->breadcrumbJsonLd([
+                    ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                    ['name' => 'Jobs', 'url' => $this->absoluteUrl(route('jobs.index', [], false))],
+                    ['name' => $job->title, 'url' => $canonicalUrl],
+                ]),
+                $this->organizationJsonLd(),
+            ],
+            implode(', ', array_filter([$job->title, $job->company?->name, $job->category?->name, $job->location?->name, 'jobs in Afghanistan'])),
         );
     }
 
@@ -419,32 +470,61 @@ class PublicController extends Controller
                 [
                     '@context' => 'https://schema.org',
                     '@type' => 'Organization',
+                    '@id' => $canonicalUrl.'#organization',
                     'name' => $company->name,
                     'url' => $canonicalUrl,
                     'description' => $description,
+                    'email' => $company->email,
+                    'telephone' => $company->phone,
+                    'address' => [
+                        '@type' => 'PostalAddress',
+                        'streetAddress' => $company->address,
+                        'addressCountry' => 'AF',
+                    ],
+                    ...($company->rating_avg > 0 && $company->reviews_count > 0 ? [
+                        'aggregateRating' => [
+                            '@type' => 'AggregateRating',
+                            'ratingValue' => $company->rating_avg,
+                            'reviewCount' => $company->reviews_count,
+                        ],
+                    ] : []),
                 ],
+                $this->breadcrumbJsonLd([
+                    ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                    ['name' => 'Companies', 'url' => $this->absoluteUrl(route('companies.index', [], false))],
+                    ['name' => $company->name, 'url' => $canonicalUrl],
+                ]),
                 $this->organizationJsonLd(),
-            ]
+            ],
+            implode(', ', array_filter([$company->name, $company->industry, 'company jobs Afghanistan', 'careers Afghanistan'])),
         );
     }
 
     private function jobPostingJsonLd(Job $job): array
     {
-        $job->loadMissing(['company', 'location']);
+        $job->loadMissing(['company', 'category', 'location', 'skills']);
 
         return [
             '@context' => 'https://schema.org',
             '@type' => 'JobPosting',
+            '@id' => $this->absoluteUrl(route('jobs.show', $job, false)).'#jobposting',
             'title' => $job->title,
             'description' => strip_tags($job->description),
             'datePosted' => $job->created_at?->toDateString(),
             'validThrough' => $job->deadline?->toAtomString(),
             'employmentType' => strtoupper($job->job_type ?? 'FULL_TIME'),
+            'url' => $this->absoluteUrl(route('jobs.show', $job, false)),
+            'identifier' => [
+                '@type' => 'PropertyValue',
+                'name' => config('app.name', 'Galaxy Jobs'),
+                'value' => (string) $job->id,
+            ],
+            'directApply' => true,
             'hiringOrganization' => [
                 '@type' => 'Organization',
                 'name' => $job->company?->name ?? config('app.name', 'Galaxy Jobs'),
-                'sameAs' => $this->absoluteUrl('/'),
-                'logo' => $this->absoluteUrl('/apple-touch-icon.png'),
+                'sameAs' => $job->company?->website ?: $this->absoluteUrl(route('companies.show', $job->company, false)),
+                'logo' => $job->company?->logo ? $this->absoluteUrl('/storage/'.$job->company->logo) : $this->absoluteUrl('/apple-touch-icon.png'),
             ],
             'jobLocation' => [
                 '@type' => 'Place',
@@ -454,6 +534,52 @@ class PublicController extends Controller
                     'addressCountry' => 'AF',
                 ],
             ],
+            ...($job->salary_min || $job->salary_max ? [
+                'baseSalary' => [
+                    '@type' => 'MonetaryAmount',
+                    'currency' => $job->salary_currency ?? 'AFN',
+                    'value' => [
+                        '@type' => 'QuantitativeValue',
+                        'minValue' => $job->salary_min,
+                        'maxValue' => $job->salary_max,
+                        'unitText' => 'MONTH',
+                    ],
+                ],
+            ] : []),
+            'occupationalCategory' => $job->category?->name,
+            'skills' => $job->skills?->pluck('name')->join(', '),
+            'applicantLocationRequirements' => [
+                '@type' => 'Country',
+                'name' => 'Afghanistan',
+            ],
+        ];
+    }
+
+    private function breadcrumbJsonLd(array $items): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => collect($items)->values()->map(fn ($item, $index) => [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $item['name'],
+                'item' => $item['url'],
+            ])->all(),
+        ];
+    }
+
+    private function itemListJsonLd(array $items): array
+    {
+        return [
+            '@context' => 'https://schema.org',
+            '@type' => 'ItemList',
+            'itemListElement' => collect($items)->values()->map(fn ($item, $index) => [
+                '@type' => 'ListItem',
+                'position' => $index + 1,
+                'name' => $item['name'],
+                'url' => $item['url'],
+            ])->all(),
         ];
     }
 
