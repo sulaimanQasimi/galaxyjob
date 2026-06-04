@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import StatusBadge from '@/components/portal/status-badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { formatDate } from '@/lib/utils';
 import jobs from '@/routes/jobs';
 import type { Job } from '@/types/portal';
 
@@ -54,7 +55,7 @@ export default function JobCard({ job }: { job: Job }) {
                         </span>
                         <span className="flex items-center gap-2">
                             <CalendarClock className="size-4 text-slate-400" />
-                            Deadline {job.deadline}
+                            Deadline {formatDate(job.deadline)}
                         </span>
                     </div>
                     <div className="mt-auto flex items-center justify-between gap-3 border-t pt-4">
