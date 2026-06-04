@@ -28,14 +28,18 @@ export type Company = {
     logo?: string | null;
     cover_image?: string | null;
     industry?: string;
+    company_size?: number;
     website?: string;
     phone?: string;
     email?: string;
     address?: string;
     description?: string;
     verification_status: 'pending' | 'approved' | 'rejected';
+    moderation_note?: string;
     is_active: boolean;
     jobs_count?: number;
+    rating_avg?: number;
+    reviews_count?: number;
     user?: { id: number; name: string; email: string };
 };
 export type Job = {
@@ -53,7 +57,10 @@ export type Job = {
     experience_level: string;
     deadline: string;
     status: string;
+    moderation_note?: string;
     is_featured: boolean;
+    views_count?: number;
+    match_score?: number;
     applications_count?: number;
     company?: Company;
     category?: Category;
@@ -67,4 +74,5 @@ export type Application = {
     cv_file?: string;
     user?: any;
     job?: Job;
+    status_updates?: any[];
 };
