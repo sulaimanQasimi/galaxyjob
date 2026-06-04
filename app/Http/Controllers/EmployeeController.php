@@ -8,7 +8,6 @@ use App\Models\ApplicationMessage;
 use App\Models\Category;
 use App\Models\JobAlert;
 use App\Models\Location;
-use App\Models\SavedCompany;
 use App\Models\ScholarshipAlert;
 use App\Models\ScholarshipCategory;
 use App\Models\Skill;
