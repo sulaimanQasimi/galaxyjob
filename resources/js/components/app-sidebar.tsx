@@ -4,6 +4,7 @@ import {
     Bell,
     Briefcase,
     Building2,
+    CalendarDays,
     CreditCard,
     FileText,
     FolderOpen,
@@ -12,9 +13,10 @@ import {
     LayoutGrid,
     ListChecks,
     Mail,
-    ScrollText,
     MapPin,
     Package,
+    Rss,
+    ScrollText,
     Tags,
     UserCircle,
     Users,
@@ -63,6 +65,13 @@ export function AppSidebar() {
                       href: '/admin/scholarships',
                       icon: GraduationCap,
                   },
+                  { title: 'Blog', href: '/admin/blog', icon: FileText },
+                  {
+                      title: 'Email Templates',
+                      href: '/admin/email-templates',
+                      icon: Mail,
+                  },
+                  { title: 'Reports', href: '/admin/reports', icon: Rss },
                   {
                       title: 'Categories',
                       href: '/admin/categories',
@@ -114,6 +123,12 @@ export function AppSidebar() {
                         icon: Users,
                     },
                     {
+                        title: 'Calendar',
+                        href: '/employer/calendar',
+                        icon: CalendarDays,
+                    },
+                    { title: 'Team', href: '/employer/team', icon: Users },
+                    {
                         title: 'Packages',
                         href: '/employer/packages',
                         icon: Package,
@@ -141,9 +156,19 @@ export function AppSidebar() {
                         icon: ListChecks,
                     },
                     {
+                        title: 'Calendar',
+                        href: '/employee/calendar',
+                        icon: CalendarDays,
+                    },
+                    {
                         title: 'Saved Jobs',
                         href: '/employee/saved-jobs',
                         icon: Heart,
+                    },
+                    {
+                        title: 'Saved Companies',
+                        href: '/employee/saved-companies',
+                        icon: Building2,
                     },
                     {
                         title: 'Job Alerts',
