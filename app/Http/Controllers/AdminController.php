@@ -4,14 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Application;
 use App\Models\AuditLog;
+use App\Models\BlogPost;
 use App\Models\Category;
 use App\Models\Company;
 use App\Models\ContactMessage;
+use App\Models\EmailTemplate;
 use App\Models\EmployerPackage;
 use App\Models\EmployerSubscription;
 use App\Models\Job;
 use App\Models\Location;
 use App\Models\Payment;
+use App\Models\Scholarship;
+use App\Models\ScholarshipCategory;
 use App\Models\User;
 use App\Support\Audits;
 use App\Support\Slugs;
@@ -34,6 +38,41 @@ class AdminController extends Controller
     public function jobs()
     {
         return Inertia::render('admin/jobs/index', ['jobs' => Job::with(['company', 'category', 'location'])->withCount('applications')->latest()->paginate(15)]);
+    }
+
+    public function scholarships()
+    {
+        return Inertia::render('admin/scholarships/index', [
+            'scholarships' => Scholarship::with('category')->latest()->paginate(15),
+            'categories' => ScholarshipCategory::orderBy('name')->get(),
+        ]);
+    }
+
+    public function blogPosts()
+    {
+        return Inertia::render('admin/blog/index', ['posts' => BlogPost::latest()->paginate(15)]);
+    }
+
+    public function emailTemplates()
+    {
+        return Inertia::render('admin/email-templates/index', ['templates' => EmailTemplate::latest()->paginate(15)]);
+    }
+
+    public function reports()
+    {
+        return Inertia::render('admin/reports/index', [
+            'stats' => [
+                'monthlyJobs' => Job::where('created_at', '>=', now()->subMonth())->count(),
+                'monthlyApplications' => Application::where('created_at', '>=', now()->subMonth())->count(),
+                'hires' => Application::where('status', 'hired')->count(),
+                'revenue' => Payment::where('status', 'approved')->sum('amount'),
+                'activeEmployers' => User::where('role', 'employer')->where('status', 'active')->count(),
+                'publishedScholarships' => Scholarship::where('is_published', true)->count(),
+            ],
+            'topCategories' => Category::withCount('jobs')->orderByDesc('jobs_count')->take(10)->get(),
+            'applicationsByStatus' => Application::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
+            'paymentsByStatus' => Payment::selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status'),
+        ]);
     }
 
     public function applications()
@@ -125,10 +164,90 @@ class AdminController extends Controller
     public function updateJob(Request $request, Job $job)
     {
         $old = $job->only(['status', 'is_featured', 'moderation_note']);
-        $job->update($request->validate(['status' => ['required', 'in:pending,active,rejected,closed'], 'is_featured' => ['required', 'boolean'], 'moderation_note' => ['nullable', 'string', 'max:2000']]));
+        $job->update($request->validate(['status' => ['required', 'in:draft,pending,active,rejected,closed'], 'is_featured' => ['required', 'boolean'], 'moderation_note' => ['nullable', 'string', 'max:2000']]));
         Audits::record('admin.job_moderated', $job, $old, $job->only(['status', 'is_featured', 'moderation_note']));
 
         return back()->with('success', 'Job updated.');
+    }
+
+    public function storeScholarship(Request $request)
+    {
+        $data = $this->scholarshipData($request);
+        $scholarship = Scholarship::create($data + ['slug' => Slugs::unique(Scholarship::class, $data['title'])]);
+        Audits::record('admin.scholarship_created', $scholarship, [], $scholarship->only(['title', 'is_published', 'is_featured']));
+
+        return back()->with('success', 'Scholarship added.');
+    }
+
+    public function storeScholarshipCategory(Request $request)
+    {
+        $data = $request->validate(['name' => ['required', 'string', 'max:255'], 'is_active' => ['nullable', 'boolean']]);
+        ScholarshipCategory::create($data + ['slug' => Slugs::unique(ScholarshipCategory::class, $data['name']), 'is_active' => $request->boolean('is_active', true)]);
+
+        return back()->with('success', 'Scholarship category added.');
+    }
+
+    public function updateScholarship(Request $request, Scholarship $scholarship)
+    {
+        $old = $scholarship->only(['title', 'is_published', 'is_featured']);
+        $data = $this->scholarshipData($request);
+        $scholarship->update($data + ['slug' => Slugs::unique(Scholarship::class, $data['title'], $scholarship->id)]);
+        Audits::record('admin.scholarship_updated', $scholarship, $old, $scholarship->only(['title', 'is_published', 'is_featured']));
+
+        return back()->with('success', 'Scholarship updated.');
+    }
+
+    public function storeBlogPost(Request $request)
+    {
+        $data = $this->blogData($request);
+        $post = BlogPost::create($data + ['slug' => Slugs::unique(BlogPost::class, $data['title']), 'published_at' => $data['is_published'] ? now() : null]);
+        Audits::record('admin.blog_created', $post, [], $post->only(['title', 'is_published']));
+
+        return back()->with('success', 'Blog post added.');
+    }
+
+    public function updateBlogPost(Request $request, BlogPost $blogPost)
+    {
+        $old = $blogPost->only(['title', 'is_published']);
+        $data = $this->blogData($request);
+        $blogPost->update($data + ['slug' => Slugs::unique(BlogPost::class, $data['title'], $blogPost->id), 'published_at' => $data['is_published'] ? ($blogPost->published_at ?? now()) : null]);
+        Audits::record('admin.blog_updated', $blogPost, $old, $blogPost->only(['title', 'is_published']));
+
+        return back()->with('success', 'Blog post updated.');
+    }
+
+    public function storeEmailTemplate(Request $request)
+    {
+        EmailTemplate::create($this->emailTemplateData($request));
+
+        return back()->with('success', 'Email template added.');
+    }
+
+    public function updateEmailTemplate(Request $request, EmailTemplate $emailTemplate)
+    {
+        $emailTemplate->update($this->emailTemplateData($request));
+
+        return back()->with('success', 'Email template updated.');
+    }
+
+    public function bulkAction(Request $request)
+    {
+        $data = $request->validate([
+            'type' => ['required', 'in:jobs,companies,payments,scholarships'],
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer'],
+            'action' => ['required', 'string'],
+        ]);
+
+        match ($data['type']) {
+            'jobs' => Job::whereIn('id', $data['ids'])->update(['status' => $data['action'] === 'approve' ? 'active' : 'rejected']),
+            'companies' => Company::whereIn('id', $data['ids'])->update(['verification_status' => $data['action'] === 'approve' ? 'approved' : 'rejected']),
+            'payments' => Payment::whereIn('id', $data['ids'])->update(['status' => $data['action'] === 'approve' ? 'approved' : 'rejected']),
+            'scholarships' => Scholarship::whereIn('id', $data['ids'])->update(['is_published' => $data['action'] === 'publish']),
+        };
+        Audits::record('admin.bulk_action', null, [], $data);
+
+        return back()->with('success', 'Bulk action completed.');
     }
 
     public function updateApplication(Request $request, Application $application)
@@ -242,5 +361,64 @@ class AdminController extends Controller
         $contactMessage->delete();
 
         return back()->with('success', 'Contact message deleted.');
+    }
+
+    private function scholarshipData(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'scholarship_category_id' => ['nullable', 'exists:scholarship_categories,id'],
+            'provider' => ['nullable', 'string', 'max:255'],
+            'country' => ['nullable', 'string', 'max:255'],
+            'study_level' => ['nullable', 'string', 'max:255'],
+            'funding_type' => ['nullable', 'string', 'max:255'],
+            'language' => ['nullable', 'in:en,fa,ps'],
+            'deadline' => ['nullable', 'date'],
+            'summary' => ['nullable', 'string', 'max:1000'],
+            'description' => ['required', 'string'],
+            'eligibility' => ['nullable', 'string'],
+            'benefits' => ['nullable', 'string'],
+            'official_url' => ['nullable', 'url', 'max:255'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_published' => ['nullable', 'boolean'],
+        ]);
+
+        $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_published'] = $request->boolean('is_published', true);
+        $data['language'] = $data['language'] ?? 'en';
+
+        return $data;
+    }
+
+    private function blogData(Request $request): array
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+            'category' => ['required', 'string', 'max:255'],
+            'language' => ['nullable', 'in:en,fa,ps'],
+            'summary' => ['nullable', 'string', 'max:1000'],
+            'body' => ['required', 'string'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_published' => ['nullable', 'boolean'],
+        ]);
+        $data['language'] = $data['language'] ?? 'en';
+        $data['is_featured'] = $request->boolean('is_featured');
+        $data['is_published'] = $request->boolean('is_published', true);
+
+        return $data;
+    }
+
+    private function emailTemplateData(Request $request): array
+    {
+        $data = $request->validate([
+            'key' => ['required', 'string', 'max:255'],
+            'name' => ['required', 'string', 'max:255'],
+            'subject' => ['required', 'string', 'max:255'],
+            'body' => ['required', 'string'],
+            'is_active' => ['nullable', 'boolean'],
+        ]);
+        $data['is_active'] = $request->boolean('is_active', true);
+
+        return $data;
     }
 }

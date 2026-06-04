@@ -7,6 +7,7 @@ import {
     CreditCard,
     FileText,
     FolderOpen,
+    GraduationCap,
     Heart,
     LayoutGrid,
     ListChecks,
@@ -40,34 +41,115 @@ export function AppSidebar() {
     const mainNavItems: NavItem[] =
         role === 'admin'
             ? [
-                  { title: 'Dashboard', href: '/admin/dashboard', icon: LayoutGrid },
+                  {
+                      title: 'Dashboard',
+                      href: '/admin/dashboard',
+                      icon: LayoutGrid,
+                  },
                   { title: 'Users', href: '/admin/users', icon: Users },
-                  { title: 'Moderation', href: '/admin/moderation', icon: ListChecks },
-                  { title: 'Companies', href: '/admin/companies', icon: Building2 },
+                  {
+                      title: 'Moderation',
+                      href: '/admin/moderation',
+                      icon: ListChecks,
+                  },
+                  {
+                      title: 'Companies',
+                      href: '/admin/companies',
+                      icon: Building2,
+                  },
                   { title: 'Jobs', href: '/admin/jobs', icon: Briefcase },
-                  { title: 'Categories', href: '/admin/categories', icon: Tags },
-                  { title: 'Locations', href: '/admin/locations', icon: MapPin },
-                  { title: 'Applications', href: '/admin/applications', icon: FileText },
-                  { title: 'Contact Messages', href: '/admin/contact-messages', icon: Mail },
+                  {
+                      title: 'Scholarships',
+                      href: '/admin/scholarships',
+                      icon: GraduationCap,
+                  },
+                  {
+                      title: 'Categories',
+                      href: '/admin/categories',
+                      icon: Tags,
+                  },
+                  {
+                      title: 'Locations',
+                      href: '/admin/locations',
+                      icon: MapPin,
+                  },
+                  {
+                      title: 'Applications',
+                      href: '/admin/applications',
+                      icon: FileText,
+                  },
+                  {
+                      title: 'Contact Messages',
+                      href: '/admin/contact-messages',
+                      icon: Mail,
+                  },
                   { title: 'Packages', href: '/admin/packages', icon: Package },
-                  { title: 'Payments', href: '/admin/payments', icon: CreditCard },
-                  { title: 'Audit Logs', href: '/admin/audit-logs', icon: ScrollText },
+                  {
+                      title: 'Payments',
+                      href: '/admin/payments',
+                      icon: CreditCard,
+                  },
+                  {
+                      title: 'Audit Logs',
+                      href: '/admin/audit-logs',
+                      icon: ScrollText,
+                  },
               ]
             : role === 'employer'
               ? [
-                    { title: 'Dashboard', href: '/employer/dashboard', icon: LayoutGrid },
-                    { title: 'Company', href: '/employer/company/edit', icon: Building2 },
+                    {
+                        title: 'Dashboard',
+                        href: '/employer/dashboard',
+                        icon: LayoutGrid,
+                    },
+                    {
+                        title: 'Company',
+                        href: '/employer/company/edit',
+                        icon: Building2,
+                    },
                     { title: 'Jobs', href: '/employer/jobs', icon: Briefcase },
-                    { title: 'Candidates', href: '/employer/candidates', icon: Users },
-                    { title: 'Packages', href: '/employer/packages', icon: Package },
-                    { title: 'Post Job', href: '/employer/jobs/create', icon: FolderOpen },
+                    {
+                        title: 'Candidates',
+                        href: '/employer/candidates',
+                        icon: Users,
+                    },
+                    {
+                        title: 'Packages',
+                        href: '/employer/packages',
+                        icon: Package,
+                    },
+                    {
+                        title: 'Post Job',
+                        href: '/employer/jobs/create',
+                        icon: FolderOpen,
+                    },
                 ]
               : [
-                    { title: 'Dashboard', href: '/employee/dashboard', icon: LayoutGrid },
-                    { title: 'Profile', href: '/employee/profile/edit', icon: UserCircle },
-                    { title: 'Applications', href: '/employee/applications', icon: ListChecks },
-                    { title: 'Saved Jobs', href: '/employee/saved-jobs', icon: Heart },
-                    { title: 'Job Alerts', href: '/employee/job-alerts', icon: Bell },
+                    {
+                        title: 'Dashboard',
+                        href: '/employee/dashboard',
+                        icon: LayoutGrid,
+                    },
+                    {
+                        title: 'Profile',
+                        href: '/employee/profile/edit',
+                        icon: UserCircle,
+                    },
+                    {
+                        title: 'Applications',
+                        href: '/employee/applications',
+                        icon: ListChecks,
+                    },
+                    {
+                        title: 'Saved Jobs',
+                        href: '/employee/saved-jobs',
+                        icon: Heart,
+                    },
+                    {
+                        title: 'Job Alerts',
+                        href: '/employee/job-alerts',
+                        icon: Bell,
+                    },
                 ];
 
     return (
@@ -89,7 +171,16 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <NavFooter items={[{ title: 'Public jobs', href: '/jobs', icon: Briefcase }]} className="mt-auto" />
+                <NavFooter
+                    items={[
+                        {
+                            title: 'Public jobs',
+                            href: '/jobs',
+                            icon: Briefcase,
+                        },
+                    ]}
+                    className="mt-auto"
+                />
                 <NavUser />
             </SidebarFooter>
         </Sidebar>

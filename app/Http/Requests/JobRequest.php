@@ -26,10 +26,12 @@ class JobRequest extends FormRequest
             'salary_currency' => ['required', 'string', 'max:8'],
             'job_type' => ['required', 'in:full_time,part_time,contract,internship,remote'],
             'work_mode' => ['required', 'in:on_site,hybrid,remote'],
+            'language' => ['nullable', 'in:en,fa,ps'],
             'experience_level' => ['required', 'in:entry,mid,senior'],
             'deadline' => ['required', 'date', 'after_or_equal:today'],
             'is_featured' => ['nullable', 'boolean'],
             'is_urgent' => ['nullable', 'boolean'],
+            'save_as_draft' => ['nullable', 'boolean'],
             'skill_ids' => ['nullable', 'array'],
             'skill_ids.*' => ['exists:skills,id'],
         ];

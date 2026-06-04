@@ -13,6 +13,7 @@ use App\Models\Job;
 use App\Models\Location;
 use App\Models\SavedJob;
 use App\Models\SavedSearch;
+use App\Models\Scholarship;
 use App\Models\Skill;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -137,6 +138,7 @@ class PublicController extends Controller
             ['loc' => $this->absoluteUrl(route('about', [], false)), 'priority' => '0.7', 'changefreq' => 'monthly'],
             ['loc' => $this->absoluteUrl(route('contact', [], false)), 'priority' => '0.7', 'changefreq' => 'monthly'],
             ['loc' => $this->absoluteUrl(route('jobs.index', [], false)), 'priority' => '0.9', 'changefreq' => 'hourly'],
+            ['loc' => $this->absoluteUrl(route('scholarships.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
             ['loc' => $this->absoluteUrl(route('companies.index', [], false)), 'priority' => '0.8', 'changefreq' => 'daily'],
         ]);
 
@@ -172,6 +174,19 @@ class PublicController extends Controller
                     'loc' => $this->absoluteUrl(route('jobs.index', ['category_id' => $category->id], false)),
                     'lastmod' => $category->updated_at?->toAtomString(),
                     'priority' => '0.5',
+                    'changefreq' => 'weekly',
+                ]);
+            });
+
+        Scholarship::published()
+            ->latest()
+            ->limit(250)
+            ->get()
+            ->each(function (Scholarship $scholarship) use ($urls) {
+                $urls->push([
+                    'loc' => $this->absoluteUrl(route('scholarships.show', ['scholarship' => $scholarship->slug], false)),
+                    'lastmod' => $scholarship->updated_at?->toAtomString(),
+                    'priority' => '0.6',
                     'changefreq' => 'weekly',
                 ]);
             });
@@ -298,6 +313,68 @@ class PublicController extends Controller
             'isSaved' => $request->user()?->savedJobs()->where('job_id', $job->id)->exists() ?? false,
             'relatedJobs' => Job::with(['company', 'category', 'location'])->public()->where('category_id', $job->category_id)->whereKeyNot($job->id)->take(4)->get(),
             'seo' => $this->jobSeo($job),
+        ]);
+    }
+
+    public function scholarships(Request $request)
+    {
+        $canonicalUrl = $this->absoluteUrl(route('scholarships.index', $request->only(['search', 'country', 'study_level', 'funding_type']), false));
+        $description = 'Browse public scholarship opportunities, study funding, eligibility details, and official scholarship links through Galaxy Jobs.';
+        $scholarships = Scholarship::published()
+            ->when($request->search, fn ($query, $search) => $query->where(fn ($q) => $q
+                ->where('title', 'like', "%{$search}%")
+                ->orWhere('provider', 'like', "%{$search}%")
+                ->orWhere('summary', 'like', "%{$search}%")))
+            ->when($request->country, fn ($query, $country) => $query->where('country', $country))
+            ->when($request->study_level, fn ($query, $level) => $query->where('study_level', $level))
+            ->when($request->funding_type, fn ($query, $type) => $query->where('funding_type', $type))
+            ->orderByDesc('is_featured')
+            ->orderByRaw('deadline is null')
+            ->orderBy('deadline')
+            ->paginate(12)
+            ->withQueryString();
+
+        return Inertia::render('public/scholarships/index', [
+            'scholarships' => $scholarships,
+            'filters' => $request->only(['search', 'country', 'study_level', 'funding_type']),
+            'facets' => [
+                'countries' => Scholarship::published()->whereNotNull('country')->distinct()->orderBy('country')->pluck('country'),
+                'studyLevels' => Scholarship::published()->whereNotNull('study_level')->distinct()->orderBy('study_level')->pluck('study_level'),
+                'fundingTypes' => Scholarship::published()->whereNotNull('funding_type')->distinct()->orderBy('funding_type')->pluck('funding_type'),
+            ],
+            'seo' => $this->pageSeo(
+                'Scholarships and Study Opportunities - Galaxy Jobs',
+                $description,
+                $canonicalUrl,
+                [
+                    $this->breadcrumbJsonLd([
+                        ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                        ['name' => 'Scholarships', 'url' => $canonicalUrl],
+                    ]),
+                    $this->itemListJsonLd($scholarships->getCollection()->map(fn (Scholarship $scholarship) => [
+                        'name' => $scholarship->title,
+                        'url' => $this->absoluteUrl(route('scholarships.show', $scholarship, false)),
+                    ])->all()),
+                    $this->organizationJsonLd(),
+                ],
+                'scholarships, study opportunities, education funding, Afghanistan scholarships, international scholarships',
+            ),
+        ]);
+    }
+
+    public function showScholarship(Scholarship $scholarship)
+    {
+        abort_unless($scholarship->is_published, 404);
+
+        return Inertia::render('public/scholarships/show', [
+            'scholarship' => $scholarship,
+            'relatedScholarships' => Scholarship::published()
+                ->whereKeyNot($scholarship->id)
+                ->when($scholarship->study_level, fn ($query) => $query->where('study_level', $scholarship->study_level))
+                ->latest()
+                ->take(4)
+                ->get(),
+            'seo' => $this->scholarshipSeo($scholarship),
         ]);
     }
 
@@ -546,6 +623,42 @@ class PublicController extends Controller
                 $this->organizationJsonLd(),
             ],
             implode(', ', array_filter([$company->name, $company->industry, 'company jobs Afghanistan', 'careers Afghanistan'])),
+        );
+    }
+
+    private function scholarshipSeo(Scholarship $scholarship): array
+    {
+        $description = Str::limit(strip_tags($scholarship->summary ?: $scholarship->description), 160);
+        $canonicalUrl = $this->absoluteUrl(route('scholarships.show', $scholarship, false));
+
+        return $this->pageSeo(
+            $scholarship->title.' - Scholarship - Galaxy Jobs',
+            $description,
+            $canonicalUrl,
+            [
+                [
+                    '@context' => 'https://schema.org',
+                    '@type' => 'EducationalOccupationalProgram',
+                    '@id' => $canonicalUrl.'#scholarship',
+                    'name' => $scholarship->title,
+                    'description' => strip_tags($scholarship->description),
+                    'provider' => [
+                        '@type' => 'Organization',
+                        'name' => $scholarship->provider ?? 'Galaxy Jobs',
+                    ],
+                    'url' => $canonicalUrl,
+                    'applicationDeadline' => $scholarship->deadline?->toDateString(),
+                    'educationalProgramMode' => $scholarship->study_level,
+                    'programPrerequisites' => strip_tags((string) $scholarship->eligibility),
+                ],
+                $this->breadcrumbJsonLd([
+                    ['name' => 'Home', 'url' => $this->absoluteUrl(route('home', [], false))],
+                    ['name' => 'Scholarships', 'url' => $this->absoluteUrl(route('scholarships.index', [], false))],
+                    ['name' => $scholarship->title, 'url' => $canonicalUrl],
+                ]),
+                $this->organizationJsonLd(),
+            ],
+            implode(', ', array_filter([$scholarship->title, $scholarship->provider, $scholarship->country, $scholarship->study_level, 'scholarships'])),
         );
     }
 

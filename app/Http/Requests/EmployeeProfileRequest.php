@@ -15,6 +15,8 @@ class EmployeeProfileRequest extends FormRequest
     {
         return [
             'headline' => ['nullable', 'string', 'max:255'],
+            'public_slug' => ['nullable', 'string', 'max:255', 'alpha_dash'],
+            'is_public' => ['nullable', 'boolean'],
             'summary' => ['nullable', 'string'],
             'phone' => ['nullable', 'string', 'max:50'],
             'address' => ['nullable', 'string', 'max:255'],

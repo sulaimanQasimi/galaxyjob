@@ -40,7 +40,13 @@ export type Company = {
     jobs_count?: number;
     rating_avg?: number;
     reviews_count?: number;
-    verification_documents?: { id: number; document_type: string; file_path: string; status: string; note?: string }[];
+    verification_documents?: {
+        id: number;
+        document_type: string;
+        file_path: string;
+        status: string;
+        note?: string;
+    }[];
     user?: { id: number; name: string; email: string };
 };
 export type Job = {
@@ -79,4 +85,21 @@ export type Application = {
     user?: any;
     job?: Job;
     status_updates?: any[];
+};
+export type Scholarship = {
+    id: number;
+    title: string;
+    slug: string;
+    provider?: string | null;
+    country?: string | null;
+    study_level?: string | null;
+    funding_type?: string | null;
+    deadline?: string | null;
+    summary?: string | null;
+    description: string;
+    eligibility?: string | null;
+    benefits?: string | null;
+    official_url?: string | null;
+    is_featured: boolean;
+    is_published: boolean;
 };

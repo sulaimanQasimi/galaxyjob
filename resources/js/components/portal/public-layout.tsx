@@ -29,6 +29,7 @@ export default function PublicLayout({
                     <nav className="hidden items-center gap-6 text-sm font-medium md:flex">
                         <Link href={home.url()}>Home</Link>
                         <Link href={jobs.index.url()}>Jobs</Link>
+                        <Link href="/scholarships">Scholarships</Link>
                         <Link href={companies.index.url()}>Companies</Link>
                         <Link href="/about">About</Link>
                         <Link href="/contact">Contact</Link>
@@ -101,6 +102,12 @@ export default function PublicLayout({
                                 Jobs
                             </Link>
                             <Link
+                                href="/scholarships"
+                                className="hover:text-emerald-700"
+                            >
+                                Scholarships
+                            </Link>
+                            <Link
                                 href={companies.index.url()}
                                 className="hover:text-emerald-700"
                             >
@@ -138,7 +145,9 @@ export default function PublicLayout({
                             >
                                 +93 797 548 234
                             </a>
-                            <span>Mazar Sharif, Muzafar Market, Afghanistan</span>
+                            <span>
+                                Mazar Sharif, Muzafar Market, Afghanistan
+                            </span>
                         </div>
                         <h2 className="mt-6 font-semibold text-slate-950">
                             Social Links

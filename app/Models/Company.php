@@ -35,4 +35,14 @@ class Company extends Model
     {
         return $this->hasMany(CompanyVerificationDocument::class);
     }
+
+    public function members()
+    {
+        return $this->hasMany(CompanyMember::class);
+    }
+
+    public function savedByUsers()
+    {
+        return $this->hasMany(SavedCompany::class);
+    }
 }
